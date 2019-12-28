@@ -13,7 +13,7 @@ if __name__ == '__main__':
     opt = functions.post_config(opt)
     Gs = []
     Zs = []
-    reals = []
+    reals = []  # ranged from most downsampled to the original image
     NoiseAmp = []
     dir2save = functions.generate_dir2save(opt)
 

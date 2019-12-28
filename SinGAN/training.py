@@ -92,10 +92,14 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
     D_fake2plot = []
     z_opt2plot = []
 
+    if (Gs == []) & (opt.mode != 'SR_train'):
+        z_opt = functions.generate_noise([1, opt.nzx, opt.nzy], device=opt.device)
+        z_opt = m_noise(z_opt.expand(1, 3, opt.nzx, opt.nzy))
+
     for epoch in range(opt.niter):
         if (Gs == []) & (opt.mode != 'SR_train'):
-            z_opt = functions.generate_noise([1,opt.nzx,opt.nzy], device=opt.device)
-            z_opt = m_noise(z_opt.expand(1,3,opt.nzx,opt.nzy))
+            # z_opt = functions.generate_noise([1,opt.nzx,opt.nzy], device=opt.device)
+            # z_opt = m_noise(z_opt.expand(1,3,opt.nzx,opt.nzy))
             noise_ = functions.generate_noise([1,opt.nzx,opt.nzy], device=opt.device)
             noise_ = m_noise(noise_.expand(1,3,opt.nzx,opt.nzy))
         else:
@@ -185,6 +189,14 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
                 rec_loss = alpha*loss(netG(Z_opt.detach(),z_prev),real)
                 rec_loss.backward(retain_graph=True)
                 rec_loss = rec_loss.detach()
+
+                if epoch % 50 == 0:
+                    print(f"Epoch: {epoch}")
+                    print(f"Niter: {j}")
+                    print(f"Noise amp: {opt.noise_amp}")
+                    print(f"Z_opt: {Z_opt}")
+                    print(f"z_opt: {z_opt}")
+                    print(f"z_prev: {z_prev}")
             else:
                 Z_opt = z_opt
                 rec_loss = 0
