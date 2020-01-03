@@ -214,9 +214,7 @@ def train_single_scale(netD,netG,reals,masks,Gs,Zs,in_s,NoiseAmp,opt,centers=Non
                 elif opt.half_rec_loss:
 
                     ny = real.shape[3]
-                    rec_loss = alpha * (loss(netG(Z_opt.detach(), z_prev), real) - loss(
-                        netG(Z_opt.detach(), z_prev)[:, :, :, :ny//2],
-                        real[:, :, :, :ny//2]))
+                    rec_loss = alpha * (loss(netG(Z_opt.detach(), z_prev)[:, :, :, :ny//2], real[:, :, :, :ny//2]))
 
                 else:
                     rec_loss = alpha*loss(netG(Z_opt.detach(),z_prev),real)
