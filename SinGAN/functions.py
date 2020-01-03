@@ -225,7 +225,6 @@ def creat_reals_pyramid(real,reals,opt,mask=None):
     masks = []
     for i in range(0,opt.stop_scale+1,1):
         scale = math.pow(opt.scale_factor,opt.stop_scale-i)
-        print(f"{i}th image: scale factor {scale}")
         curr_real = imresize(real,scale,opt)
         if mask:
             masks.append(get_downsampled_mask(real, scale, opt, mask, cover_ratio=0.8))

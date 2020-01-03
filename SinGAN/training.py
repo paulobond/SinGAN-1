@@ -80,6 +80,13 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
 def train_single_scale(netD,netG,reals,masks,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
 
     real = reals[len(Gs)]
+    if opt.inpainting_mask_size:
+        mask = masks[len(Gs)]
+        discriminator_mask = models.get_mask_discriminator(real, mask, opt, cover_ratio=0.8)
+        print(f"Image shape at scale {len(Gs)}: {real.shape}")
+        print(f"Image mask: {mask}")
+        print(f"Discriminator mask: {discriminator_mask}")
+
     opt.nzx = real.shape[2]#+(opt.ker_size-1)*(opt.num_layer)
     opt.nzy = real.shape[3]#+(opt.ker_size-1)*(opt.num_layer)
     opt.receptive_field = opt.ker_size + ((opt.ker_size-1)*(opt.num_layer-1))*opt.stride
@@ -135,7 +142,11 @@ def train_single_scale(netD,netG,reals,masks,Gs,Zs,in_s,NoiseAmp,opt,centers=Non
 
             output = netD(real).to(opt.device)
             #D_real_map = output.detach()
-            errD_real = -output.mean()#-a
+            if opt.inpainting_mask_size:
+                errD_real = -output.mean() + output[:, :, discriminator_mask['xmin']:discriminator_mask['xmax']+1,
+                                             discriminator_mask['ymin']:discriminator_mask['ymax']+1].mean()
+            else:
+                errD_real = -output.mean()
             errD_real.backward(retain_graph=True)
             D_x = -errD_real.item()
 
@@ -208,7 +219,7 @@ def train_single_scale(netD,netG,reals,masks,Gs,Zs,in_s,NoiseAmp,opt,centers=Non
                 Z_opt = opt.noise_amp*z_opt+z_prev
 
                 if opt.inpainting_mask_size:
-                    mask = masks[len(Gs)]
+
                     rec_loss = alpha * (loss(netG(Z_opt.detach(), z_prev), real) - loss(netG(Z_opt.detach(), z_prev)[:,:,mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1],
                                                                                         real[:,:,mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1]))
                 elif opt.half_rec_loss:
