@@ -222,13 +222,13 @@ def train_single_scale(netD,netG,reals,masks,Gs,Zs,in_s,NoiseAmp,opt,centers=Non
                 rec_loss.backward(retain_graph=True)
                 rec_loss = rec_loss.detach()
 
-                if epoch % 50 == 0:
-                    print(f"Epoch: {epoch}")
-                    print(f"Niter: {j}")
-                    print(f"Noise amp: {opt.noise_amp}")
-                    print(f"Z_opt: {Z_opt}")
-                    print(f"z_opt: {z_opt}")
-                    print(f"z_prev: {z_prev}")
+                # if epoch % 50 == 0:
+                #     print(f"Epoch: {epoch}")
+                #     print(f"Niter: {j}")
+                #     print(f"Noise amp: {opt.noise_amp}")
+                #     print(f"Z_opt: {Z_opt}")
+                #     print(f"z_opt: {z_opt}")
+                #     print(f"z_prev: {z_prev}")
             else:
                 Z_opt = z_opt
                 rec_loss = 0
