@@ -21,12 +21,9 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
         happy_with_mask = False
         while not happy_with_mask:
             real, mask = functions.put_random_mask(real, opt.inpainting_mask_size)
-            plt.imshow((real.numpy().squeeze().transpose((1, 2, 0)) + 1) / 2)
-            happy_with_mask = input('Happy with the mask for inpainting? (y/n)')
-            if happy_with_mask in ['y', 'yes', 'YES', 'Y']:
-                happy_with_mask = True
-            else:
-                happy_with_mask = False
+            happy_with_mask = True
+            print(f"Image size: {real.shape}")
+            print(f"Image mask: {mask}")
 
         reals, masks = functions.creat_reals_pyramid(real, reals, opt, mask=mask)
     else:
