@@ -13,6 +13,7 @@ from SinGAN.imresize import imresize
 import os
 import random
 from sklearn.cluster import KMeans
+import copy
 
 
 # custom weights initialization called on netG and netD
@@ -218,13 +219,18 @@ def adjust_scales2image_SR(real_,opt):
     opt.stop_scale = opt.num_scales - scale2stop
     return real
 
-def creat_reals_pyramid(real,reals,opt):
+
+def creat_reals_pyramid(real,reals,opt,mask=None):
     real = real[:,0:3,:,:]
+    masks = []
     for i in range(0,opt.stop_scale+1,1):
         scale = math.pow(opt.scale_factor,opt.stop_scale-i)
+        print(f"{i}th image: scale factor {scale}")
         curr_real = imresize(real,scale,opt)
+        if mask:
+            masks.append(get_downsampled_mask(real, scale, opt, mask, cover_ratio=0.8))
         reals.append(curr_real)
-    return reals
+    return reals, masks
 
 
 def load_trained_pyramid(opt, mode_='train'):
@@ -287,7 +293,8 @@ def generate_dir2save(opt):
 
 def post_config(opt):
     # init fixed parameters
-    opt.device = torch.device("cpu" if opt.not_cuda else "cuda:0")
+    opt.device = torch.device("cpu" if not torch.cuda.is_available() else "cuda:0")
+    opt.not_cuda = True if not torch.cuda.is_available() else opt.not_cuda
     opt.niter_init = opt.niter
     opt.noise_amp_init = opt.noise_amp
     opt.nfc_init = opt.nfc
@@ -360,3 +367,45 @@ def dilate_mask(mask,opt):
     return mask
 
 
+def put_random_mask(image, n_pixels=20):
+
+    image = copy.deepcopy(image)
+    mask_size = (n_pixels, n_pixels)
+    offset_x = random.randint(1, max(image.shape[2] - mask_size[0] - 1, 2))
+    offset_y = random.randint(1, max(image.shape[3] - mask_size[1] - 1, 2))
+
+    for i in range(offset_x, offset_x + mask_size[0]):
+        for j in range(offset_y, offset_y + mask_size[1]):
+            image[:, :, i, j] = -1
+
+    mask = {
+        'xmin': offset_x,
+        'xmax': offset_x+mask_size[0]-1,
+        'ymin': offset_y,
+        'ymax': offset_y+mask_size[1]-1
+    }
+    return image, mask
+
+
+def get_downsampled_mask(real, scale, opt, mask, cover_ratio=0.8):
+    assert 0 <= cover_ratio <= 1
+    real_2 = copy.deepcopy(real)
+    real_2[:,:,:,:] = 0
+    for i in range(mask['xmin'], mask['xmax']+1):
+        for j in range(mask['ymin'], mask['ymax']+1):
+            real_2[:,:,i,j] = 1
+    downsampled = imresize(real_2, scale, opt)
+    xs = []
+    ys = []
+    for i in range(downsampled.shape[2]):
+        for j in range(downsampled.shape[3]):
+            if downsampled[0, 0, i, j] >= cover_ratio:
+                xs.append(i)
+                ys.append(j)
+    new_mask = {
+        'xmin': min(xs),
+        'xmax': max(xs),
+        'ymin': min(ys),
+        'ymax': max(ys)
+    }
+    return new_mask

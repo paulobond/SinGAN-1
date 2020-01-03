@@ -8,16 +8,34 @@ import math
 import matplotlib.pyplot as plt
 from SinGAN.imresize import imresize
 
+
 def train(opt,Gs,Zs,reals,NoiseAmp):
     real_ = functions.read_image(opt)
     in_s = 0
     scale_num = 0
+
     real = imresize(real_,opt.scale1,opt)
-    reals = functions.creat_reals_pyramid(real,reals,opt)
+    reals, _ = functions.creat_reals_pyramid(real,reals,opt)
+
+    if opt.inpainting_mask_size:
+        happy_with_mask = False
+        while not happy_with_mask:
+            real, mask = functions.put_random_mask(real, opt.inpainting_mask_size)
+            plt.imshow((real.numpy().squeeze().transpose((1, 2, 0)) + 1) / 2)
+            happy_with_mask = input('Happy with the mask for inpainting? (y/n)')
+            if happy_with_mask in ['y', 'yes', 'YES', 'Y']:
+                happy_with_mask = True
+            else:
+                happy_with_mask = False
+
+        reals, masks = functions.creat_reals_pyramid(real, reals, opt, mask=mask)
+    else:
+        reals, masks = functions.creat_reals_pyramid(real, reals, opt)
+
     nfc_prev = 0
 
     while scale_num<opt.stop_scale+1:
-        opt.nfc = min(opt.nfc_init * pow(2, math.floor(scale_num / 4)), 128)
+        opt.nfc = min(opt.nfc_init * pow(2, math.floor(scale_num / 4)), 128)  # number of convolutional kernels
         opt.min_nfc = min(opt.min_nfc_init * pow(2, math.floor(scale_num / 4)), 128)
 
         opt.out_ = functions.generate_dir2save(opt)
@@ -31,12 +49,13 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
         #plt.imsave('%s/original.png' %  (opt.out_), functions.convert_image_np(real_), vmin=0, vmax=1)
         plt.imsave('%s/real_scale.png' %  (opt.outf), functions.convert_image_np(reals[scale_num]), vmin=0, vmax=1)
 
-        D_curr,G_curr = init_models(opt)
+        D_curr,G_curr = init_models(opt, verbose=False)
         if (nfc_prev==opt.nfc):
+            print(f"Scale {scale_num}. Loading network weights from previous scale")
             G_curr.load_state_dict(torch.load('%s/%d/netG.pth' % (opt.out_,scale_num-1)))
             D_curr.load_state_dict(torch.load('%s/%d/netD.pth' % (opt.out_,scale_num-1)))
 
-        z_curr,in_s,G_curr = train_single_scale(D_curr,G_curr,reals,Gs,Zs,in_s,NoiseAmp,opt)
+        z_curr,in_s,G_curr = train_single_scale(D_curr,G_curr,reals,masks,Gs,Zs,in_s,NoiseAmp,opt)
 
         G_curr = functions.reset_grads(G_curr,False)
         G_curr.eval()
@@ -58,8 +77,7 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
     return
 
 
-
-def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
+def train_single_scale(netD,netG,reals,masks,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
 
     real = reals[len(Gs)]
     opt.nzx = real.shape[2]#+(opt.ker_size-1)*(opt.num_layer)
@@ -71,10 +89,10 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
         opt.nzx = real.shape[2]+(opt.ker_size-1)*(opt.num_layer)
         opt.nzy = real.shape[3]+(opt.ker_size-1)*(opt.num_layer)
         pad_noise = 0
-    m_noise = nn.ZeroPad2d(int(pad_noise))
+    m_noise = nn.ZeroPad2d(int(pad_noise))  # enough padding so that output image has same dimension as input image
     m_image = nn.ZeroPad2d(int(pad_image))
 
-    alpha = opt.alpha
+    alpha = opt.alpha  # reconstruction weight
 
     fixed_noise = functions.generate_noise([opt.nc_z,opt.nzx,opt.nzy],device=opt.device)
     z_opt = torch.full(fixed_noise.shape, 0, device=opt.device)
@@ -93,15 +111,17 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
     z_opt2plot = []
 
     if (Gs == []) & (opt.mode != 'SR_train'):
+        # For reconstruction loss: sample fixed noise
         z_opt = functions.generate_noise([1, opt.nzx, opt.nzy], device=opt.device)
         z_opt = m_noise(z_opt.expand(1, 3, opt.nzx, opt.nzy))
 
     for epoch in range(opt.niter):
         if (Gs == []) & (opt.mode != 'SR_train'):
+            # commented lines below from official implementation (code error)
             # z_opt = functions.generate_noise([1,opt.nzx,opt.nzy], device=opt.device)
             # z_opt = m_noise(z_opt.expand(1,3,opt.nzx,opt.nzy))
             noise_ = functions.generate_noise([1,opt.nzx,opt.nzy], device=opt.device)
-            noise_ = m_noise(noise_.expand(1,3,opt.nzx,opt.nzy))
+            noise_ = m_noise(noise_.expand(1,3,opt.nzx,opt.nzy))  # same noise for each channel
         else:
             noise_ = functions.generate_noise([opt.nc_z,opt.nzx,opt.nzy], device=opt.device)
             noise_ = m_noise(noise_)
@@ -186,7 +206,21 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
                     z_prev = functions.quant2centers(z_prev, centers)
                     plt.imsave('%s/z_prev.png' % (opt.outf), functions.convert_image_np(z_prev), vmin=0, vmax=1)
                 Z_opt = opt.noise_amp*z_opt+z_prev
-                rec_loss = alpha*loss(netG(Z_opt.detach(),z_prev),real)
+
+                if opt.inpainting_mask_size:
+                    mask = masks[len(Gs)]
+                    rec_loss = alpha * (loss(netG(Z_opt.detach(), z_prev), real) - loss(netG(Z_opt.detach(), z_prev)[:,:,mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1],
+                                                                                        real[:,:,mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1]))
+                elif opt.half_rec_loss:
+
+                    ny = real.shape[3]
+                    rec_loss = alpha * (loss(netG(Z_opt.detach(), z_prev), real) - loss(
+                        netG(Z_opt.detach(), z_prev)[:, :, :, :ny//2],
+                        real[:, :, :, :ny//2]))
+
+                else:
+                    rec_loss = alpha*loss(netG(Z_opt.detach(),z_prev),real)
+
                 rec_loss.backward(retain_graph=True)
                 rec_loss = rec_loss.detach()
 
@@ -315,20 +349,22 @@ def train_paint(opt,Gs,Zs,reals,NoiseAmp,centers,paint_inject_scale):
     return
 
 
-def init_models(opt):
+def init_models(opt, verbose=False):
 
     #generator initialization:
     netG = models.GeneratorConcatSkip2CleanAdd(opt).to(opt.device)
     netG.apply(models.weights_init)
     if opt.netG != '':
         netG.load_state_dict(torch.load(opt.netG))
-    print(netG)
+    if verbose:
+        print(netG)
 
     #discriminator initialization:
     netD = models.WDiscriminator(opt).to(opt.device)
     netD.apply(models.weights_init)
     if opt.netD != '':
         netD.load_state_dict(torch.load(opt.netD))
-    print(netD)
+    if verbose:
+        print(netD)
 
     return netD, netG

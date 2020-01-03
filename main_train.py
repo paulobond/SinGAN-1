@@ -9,8 +9,19 @@ if __name__ == '__main__':
     parser.add_argument('--input_dir', help='input image dir', default='Input/Images')
     parser.add_argument('--input_name', help='input image name', required=True)
     parser.add_argument('--mode', help='task to be done', default='train')
+
+    parser.add_argument('--inpainting_mask_size', type=int, help='Random mask (inpainting)', default=0)
+
+    parser.add_argument('--half_rec_loss', type=bool, help='Rec loss computed on the right half only (used as a test)',
+                        default=False)
+
     opt = parser.parse_args()
     opt = functions.post_config(opt)
+
+    if opt.half_rec_loss:
+        # Don't allow both experiment at the same time
+        opt.inpainting_mask_size = 0
+
     Gs = []
     Zs = []
     reals = []  # ranged from most downsampled to the original image

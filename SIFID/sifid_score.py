@@ -229,21 +229,19 @@ def calculate_sifid_given_paths(path1, path2, batch_size, cuda, dims, suffix):
         model.cuda()
 
     path1 = pathlib.Path(path1)
-    files1 = list(path1.glob('*.%s' %suffix))
+    files1 = [path1]
 
     path2 = pathlib.Path(path2)
-    files2 = list(path2.glob('*.%s' %suffix))
+    files2 = [path2]
 
     fid_values = []
-    Im_ind = []
+
     for i in range(len(files2)):
         m1, s1 = calculate_activation_statistics([files1[i]], model, batch_size, dims, cuda)
         m2, s2 = calculate_activation_statistics([files2[i]], model, batch_size, dims, cuda)
         fid_values.append(calculate_frechet_distance(m1, s1, m2, s2))
-        file_num1 = files1[i].name
-        file_num2 = files2[i].name
-        Im_ind.append(int(file_num1[:-4]))
-        Im_ind.append(int(file_num2[:-4]))
+
+
     return fid_values
 
 
@@ -259,4 +257,5 @@ if __name__ == '__main__':
 
     sifid_values = np.asarray(sifid_values,dtype=np.float32)
     numpy.save('SIFID', sifid_values)
+    print('SIFID values: ', sifid_values)
     print('SIFID: ', sifid_values.mean())
