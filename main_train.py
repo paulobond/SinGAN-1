@@ -33,7 +33,7 @@ if __name__ == '__main__':
         real = functions.read_image(opt)
         functions.adjust_scales2image(real, opt)
 
-        opt.input_name = opt.input_name + f"_exp_{opt.experiment}"
+        opt.input_name = opt.input_name + f"_exp_{opt.experiment}_msksize_{opt.inpainting_mask_size}"
 
         train(opt, Gs, Zs, reals, NoiseAmp)
         SinGAN_generate(Gs,Zs,reals,NoiseAmp,opt)
