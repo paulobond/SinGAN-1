@@ -16,7 +16,6 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
     scale_num = 0
 
     real = imresize(real_,opt.scale1,opt)
-    reals, _ = functions.creat_reals_pyramid(real,reals,opt)
 
     print(f"Image max pixel: {torch.max(real)}")
     print(f"Image min pixel: {torch.min(real)}")
