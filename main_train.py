@@ -16,6 +16,7 @@ if __name__ == '__main__':
 
     opt = parser.parse_args()
     opt = functions.post_config(opt)
+    opt.input_name_folder = opt.input_name[:-4] + f"_exp_{opt.experiment}_msksize_{opt.inpainting_mask_size}"
 
     Gs = []
     Zs = []
@@ -34,8 +35,6 @@ if __name__ == '__main__':
             pass
         real = functions.read_image(opt)
         functions.adjust_scales2image(real, opt)
-
-        opt.input_name_folder = opt.input_name[:-4] + f"_exp_{opt.experiment}_msksize_{opt.inpainting_mask_size}"
 
         train(opt, Gs, Zs, reals, NoiseAmp)
         SinGAN_generate(Gs,Zs,reals,NoiseAmp,opt)
