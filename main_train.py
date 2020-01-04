@@ -23,6 +23,8 @@ if __name__ == '__main__':
     NoiseAmp = []
     dir2save = functions.generate_dir2save(opt)
 
+    print(f"EXPERIMENT {opt.experiment}")
+
     if (os.path.exists(dir2save)):
         print('trained model already exist')
     else:
