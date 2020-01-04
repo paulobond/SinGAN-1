@@ -7,6 +7,7 @@ import torch.utils.data
 import math
 import matplotlib.pyplot as plt
 from SinGAN.imresize import imresize
+import random
 
 
 def train(opt,Gs,Zs,reals,NoiseAmp):
@@ -17,15 +18,26 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
     real = imresize(real_,opt.scale1,opt)
     reals, _ = functions.creat_reals_pyramid(real,reals,opt)
 
+    print(f"Image max pixel: {torch.max(real)}")
+    print(f"Image min pixel: {torch.min(real)}")
+
     if opt.inpainting_mask_size:
+
         happy_with_mask = False
         while not happy_with_mask:
             real, mask = functions.put_random_mask(real, opt.inpainting_mask_size)
             happy_with_mask = True
+            print(f"Mask has been put on image")
             print(f"Image size: {real.shape}")
             print(f"Image mask: {mask}")
+            print(f"Image max pixel: {torch.max(real)}")
+            print(f"Image min pixel: {torch.min(real)}")
 
         reals, masks = functions.creat_reals_pyramid(real, reals, opt, mask=mask)
+
+        for i in range(len(reals)):
+            print(f"Pixel values at mask {i}:")
+            print(reals[i][:,:, masks[i]['xmin']:masks[i]['xmax']+1, masks[i]['ymin']:masks[i]['ymax']+1])
     else:
         reals, masks = functions.creat_reals_pyramid(real, reals, opt)
 

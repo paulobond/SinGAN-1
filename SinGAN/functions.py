@@ -227,7 +227,7 @@ def creat_reals_pyramid(real,reals,opt,mask=None):
         scale = math.pow(opt.scale_factor,opt.stop_scale-i)
         curr_real = imresize(real,scale,opt)
         if mask:
-            masks.append(get_downsampled_mask(real, scale, opt, mask, cover_ratio=0.8))
+            masks.append(get_downsampled_mask(real, scale, opt, mask))
         reals.append(curr_real)
     return reals, masks
 
@@ -373,9 +373,7 @@ def put_random_mask(image, n_pixels=20):
     offset_x = random.randint(1, max(image.shape[2] - mask_size[0] - 1, 2))
     offset_y = random.randint(1, max(image.shape[3] - mask_size[1] - 1, 2))
 
-    for i in range(offset_x, offset_x + mask_size[0]):
-        for j in range(offset_y, offset_y + mask_size[1]):
-            image[:, :, i, j] = -1
+    image[:, :, offset_x:offset_x+mask_size[0], offset_y:offset_y+mask_size[1]] = -1
 
     mask = {
         'xmin': offset_x,
@@ -386,8 +384,7 @@ def put_random_mask(image, n_pixels=20):
     return image, mask
 
 
-def get_downsampled_mask(real, scale, opt, mask, cover_ratio=0.8):
-    assert 0 <= cover_ratio <= 1
+def get_downsampled_mask(real, scale, opt, mask):
     real_2 = copy.deepcopy(real)
     real_2[:,:,:,:] = 0
     for i in range(mask['xmin'], mask['xmax']+1):
@@ -398,7 +395,7 @@ def get_downsampled_mask(real, scale, opt, mask, cover_ratio=0.8):
     ys = []
     for i in range(downsampled.shape[2]):
         for j in range(downsampled.shape[3]):
-            if downsampled[0, 0, i, j] >= cover_ratio:
+            if downsampled[0, 0, i, j] > 0:
                 xs.append(i)
                 ys.append(j)
     new_mask = {
