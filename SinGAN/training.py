@@ -35,6 +35,9 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
 
         reals, masks = functions.creat_reals_pyramid(real, reals, opt, mask=mask)
 
+        print(f"len reals: {len(reals)}")
+        print(f"len masks: {len(reals)}")
+
         for i in range(len(reals)):
             print(f"Pixel values at mask {i}:")
             print(reals[i][:,:, masks[i]['xmin']:masks[i]['xmax']+1, masks[i]['ymin']:masks[i]['ymax']+1])
