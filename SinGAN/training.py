@@ -19,29 +19,15 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
 
     print(f"Image max pixel: {torch.max(real)}")
     print(f"Image min pixel: {torch.min(real)}")
+    real_masked, mask = functions.put_random_mask(real, opt.inpainting_mask_size)
+    print(f"Mask has been put on image")
+    print(f"Image size: {real_masked.shape}")
+    print(f"Image mask: {mask}")
+    print(f"Image max pixel: {torch.max(real_masked)}")
+    print(f"Image min pixel: {torch.min(real_masked)}")
+    reals_masked, masks = functions.creat_reals_pyramid(real_masked, opt, mask=mask)
 
-    if opt.inpainting_mask_size:
-
-        happy_with_mask = False
-        while not happy_with_mask:
-            real, mask = functions.put_random_mask(real, opt.inpainting_mask_size)
-            happy_with_mask = True
-            print(f"Mask has been put on image")
-            print(f"Image size: {real.shape}")
-            print(f"Image mask: {mask}")
-            print(f"Image max pixel: {torch.max(real)}")
-            print(f"Image min pixel: {torch.min(real)}")
-
-        reals, masks = functions.creat_reals_pyramid(real, reals, opt, mask=mask)
-
-        print(f"len reals: {len(reals)}")
-        print(f"len masks: {len(reals)}")
-
-        for i in range(len(reals)):
-            print(f"Pixel values at mask {i}:")
-            print(reals[i][:,:, masks[i]['xmin']:masks[i]['xmax']+1, masks[i]['ymin']:masks[i]['ymax']+1])
-    else:
-        reals, masks = functions.creat_reals_pyramid(real, reals, opt)
+    reals, _ = functions.creat_reals_pyramid(real, opt)
 
     nfc_prev = 0
 
@@ -59,6 +45,8 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
         #plt.imsave('%s/in.png' %  (opt.out_), functions.convert_image_np(real), vmin=0, vmax=1)
         #plt.imsave('%s/original.png' %  (opt.out_), functions.convert_image_np(real_), vmin=0, vmax=1)
         plt.imsave('%s/real_scale.png' %  (opt.outf), functions.convert_image_np(reals[scale_num]), vmin=0, vmax=1)
+        if opt.inpainting_mask_size:
+            plt.imsave('%s/real_scale_masked.png' %  (opt.outf), functions.convert_image_np(reals_masked[scale_num]), vmin=0, vmax=1)
 
         D_curr,G_curr = init_models(opt, verbose=False)
         if (nfc_prev==opt.nfc):
@@ -66,7 +54,7 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
             G_curr.load_state_dict(torch.load('%s/%d/netG.pth' % (opt.out_,scale_num-1)))
             D_curr.load_state_dict(torch.load('%s/%d/netD.pth' % (opt.out_,scale_num-1)))
 
-        z_curr,in_s,G_curr = train_single_scale(D_curr,G_curr,reals,masks,Gs,Zs,in_s,NoiseAmp,opt)
+        z_curr,in_s,G_curr = train_single_scale(D_curr,G_curr,reals,reals_masked,masks,Gs,Zs,in_s,NoiseAmp,opt)
 
         G_curr = functions.reset_grads(G_curr,False)
         G_curr.eval()
@@ -88,15 +76,15 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
     return
 
 
-def train_single_scale(netD,netG,reals,masks,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
+def train_single_scale(netD,netG,reals,reals_masked,masks,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
 
     real = reals[len(Gs)]
-    if opt.inpainting_mask_size:
-        mask = masks[len(Gs)]
-        discriminator_mask = models.get_mask_discriminator(real, mask, opt, cover_ratio=0.8)
-        print(f"Image shape at scale {len(Gs)}: {real.shape}")
-        print(f"Image mask: {mask}")
-        print(f"Discriminator mask: {discriminator_mask}")
+    mask = masks[len(Gs)]
+    real_masked = reals_masked[len(Gs)]
+    discriminator_mask = models.get_mask_discriminator(real, mask, opt, cover_ratio=0.8)
+    print(f"Image shape at scale {len(Gs)}: {real.shape}")
+    print(f"Image mask: {mask}")
+    print(f"Discriminator mask: {discriminator_mask}")
 
     opt.nzx = real.shape[2]#+(opt.ker_size-1)*(opt.num_layer)
     opt.nzy = real.shape[3]#+(opt.ker_size-1)*(opt.num_layer)
@@ -151,12 +139,17 @@ def train_single_scale(netD,netG,reals,masks,Gs,Zs,in_s,NoiseAmp,opt,centers=Non
             # train with real
             netD.zero_grad()
 
-            output = netD(real).to(opt.device)
+            if opt.experiment in [0, 1, 2]:
+                output = netD(real).to(opt.device)
+            else:
+                output = netD(real_masked).to(opt.device)
+
             #D_real_map = output.detach()
-            if opt.inpainting_mask_size:
+            if opt.experiment in [2, 3, 4]:
                 errD_real = -output.mean() + output[:, :, discriminator_mask['xmin']:discriminator_mask['xmax']+1,
                                              discriminator_mask['ymin']:discriminator_mask['ymax']+1].mean()
             else:
+                assert opt.experiment in [0, 1, 5]
                 errD_real = -output.mean()
             errD_real.backward(retain_graph=True)
             D_x = -errD_real.item()
@@ -178,16 +171,34 @@ def train_single_scale(netD,netG,reals,masks,Gs,Zs,in_s,NoiseAmp,opt,centers=Non
                     z_prev = m_image(z_prev)
                     prev = z_prev
                 else:
-                    prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rand',m_noise,m_image,opt)
-                    prev = m_image(prev)
-                    z_prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rec',m_noise,m_image,opt)
-                    criterion = nn.MSELoss()
-                    RMSE = torch.sqrt(criterion(real, z_prev))
-                    opt.noise_amp = opt.noise_amp_init*RMSE
-                    z_prev = m_image(z_prev)
+
+                    if opt.experiment in [1, 4, 5]:
+                        assert opt.experiment in [1, 4, 5]
+                        prev = draw_concat(Gs, Zs, reals_masked, NoiseAmp, in_s, 'rand', m_noise, m_image, opt)
+                        prev = m_image(prev)
+                        z_prev = draw_concat(Gs, Zs, reals_masked, NoiseAmp, in_s, 'rec', m_noise, m_image, opt)
+                        criterion = nn.MSELoss()
+                        RMSE = torch.sqrt(criterion(real_masked, z_prev))
+                        opt.noise_amp = opt.noise_amp_init * RMSE
+                        z_prev = m_image(z_prev)
+                    else:
+                        assert opt.experiment in [0, 2, 3]
+                        prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rand',m_noise,m_image,opt)
+                        prev = m_image(prev)
+                        z_prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rec',m_noise,m_image,opt)
+                        criterion = nn.MSELoss()
+                        RMSE = torch.sqrt(criterion(real, z_prev))
+                        opt.noise_amp = opt.noise_amp_init * RMSE
+                        z_prev = m_image(z_prev)
+
             else:
-                prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rand',m_noise,m_image,opt)
-                prev = m_image(prev)
+                if opt.experiment in [1, 4, 5]:
+                    prev = draw_concat(Gs,Zs,reals_masked,NoiseAmp,in_s,'rand',m_noise,m_image,opt)
+                    prev = m_image(prev)
+                else:
+                    assert opt.experiment in [0, 2, 3]
+                    prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, 'rand', m_noise, m_image, opt)
+                    prev = m_image(prev)
 
             if opt.mode == 'paint_train':
                 prev = functions.quant2centers(prev,centers)
@@ -229,15 +240,10 @@ def train_single_scale(netD,netG,reals,masks,Gs,Zs,in_s,NoiseAmp,opt,centers=Non
                     plt.imsave('%s/z_prev.png' % (opt.outf), functions.convert_image_np(z_prev), vmin=0, vmax=1)
                 Z_opt = opt.noise_amp*z_opt+z_prev
 
-                if opt.inpainting_mask_size:
+                if opt.experiment in [1, 4, 5]:
 
-                    rec_loss = alpha * (loss(netG(Z_opt.detach(), z_prev), real) - loss(netG(Z_opt.detach(), z_prev)[:,:,mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1],
+                    rec_loss = alpha * (loss(netG(Z_opt.detach(), z_prev), real_masked) - loss(netG(Z_opt.detach(), z_prev)[:,:,mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1],
                                                                                         real[:,:,mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1]))
-                elif opt.half_rec_loss:
-
-                    ny = real.shape[3]
-                    rec_loss = alpha * (loss(netG(Z_opt.detach(), z_prev)[:, :, :, :ny//2], real[:, :, :, :ny//2]))
-
                 else:
                     rec_loss = alpha*loss(netG(Z_opt.detach(),z_prev),real)
 

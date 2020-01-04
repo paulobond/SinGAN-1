@@ -220,16 +220,17 @@ def adjust_scales2image_SR(real_,opt):
     return real
 
 
-def creat_reals_pyramid(real,reals,opt,mask=None):
+def creat_reals_pyramid(real,opt,mask=None):
     real = real[:,0:3,:,:]
+    res = []
     masks = []
     for i in range(0,opt.stop_scale+1,1):
         scale = math.pow(opt.scale_factor,opt.stop_scale-i)
         curr_real = imresize(real,scale,opt)
         if mask:
             masks.append(get_downsampled_mask(real, scale, opt, mask))
-        reals.append(curr_real)
-    return reals, masks
+        res.append(curr_real)
+    return res, masks
 
 
 def load_trained_pyramid(opt, mode_='train'):
