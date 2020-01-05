@@ -55,6 +55,7 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
         torch.save(Ds, '%s/Ds.pth' % (opt.out_))
         torch.save(reals, '%s/reals.pth' % (opt.out_))
         torch.save(NoiseAmp, '%s/NoiseAmp.pth' % (opt.out_))
+        torch.save(opt, '%s/opt.pth' % (opt.out_))
 
         scale_num+=1
         nfc_prev = opt.nfc
