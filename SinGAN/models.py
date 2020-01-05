@@ -94,4 +94,4 @@ def get_mask_discriminator(real, mask, opt, cover_ratio=0.8):
         'ymin': min(ys),
         'ymax': max(ys)
     }
-    return new_mask
+    return new_mask, output_clamped.shape

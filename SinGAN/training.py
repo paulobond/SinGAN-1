@@ -81,9 +81,10 @@ def train_single_scale(netD,netG,reals,reals_masked,masks,Gs,Zs,in_s,NoiseAmp,op
     real = reals[len(Gs)]
     mask = masks[len(Gs)]
     real_masked = reals_masked[len(Gs)]
-    discriminator_mask = models.get_mask_discriminator(real, mask, opt, cover_ratio=0.8)
+    discriminator_mask, output_disc_shape = models.get_mask_discriminator(real, mask, opt, cover_ratio=0.8)
     print(f"Image shape at scale {len(Gs)}: {real.shape}")
     print(f"Image mask: {mask}")
+    print(f"Discriminator shape: {output_disc_shape}")
     print(f"Discriminator mask: {discriminator_mask}")
 
     opt.nzx = real.shape[2]#+(opt.ker_size-1)*(opt.num_layer)
@@ -139,15 +140,19 @@ def train_single_scale(netD,netG,reals,reals_masked,masks,Gs,Zs,in_s,NoiseAmp,op
             # train with real
             netD.zero_grad()
 
-            if opt.experiment in [0, 1, 2]:
+            if opt.experiment in [0, 1, 2, 200]:
                 output = netD(real).to(opt.device)
             else:
+                assert opt.experiment in [3, 4, 5]
                 output = netD(real_masked).to(opt.device)
 
             #D_real_map = output.detach()
             if opt.experiment in [2, 3, 4]:
                 errD_real = -output.mean() + output[:, :, discriminator_mask['xmin']:discriminator_mask['xmax']+1,
                                              discriminator_mask['ymin']:discriminator_mask['ymax']+1].mean()
+            elif opt.experiment in [200]:
+                assert output_disc_shape == output.shape
+                errD_real = -output[:, :, :, :int(0.8*output_disc_shape[3])].mean()
             else:
                 assert opt.experiment in [0, 1, 5]
                 errD_real = -output.mean()
@@ -182,7 +187,7 @@ def train_single_scale(netD,netG,reals,reals_masked,masks,Gs,Zs,in_s,NoiseAmp,op
                         opt.noise_amp = opt.noise_amp_init * RMSE
                         z_prev = m_image(z_prev)
                     else:
-                        assert opt.experiment in [0, 2, 3]
+                        assert opt.experiment in [0, 2, 3, 200]
                         prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rand',m_noise,m_image,opt)
                         prev = m_image(prev)
                         z_prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rec',m_noise,m_image,opt)
@@ -196,7 +201,7 @@ def train_single_scale(netD,netG,reals,reals_masked,masks,Gs,Zs,in_s,NoiseAmp,op
                     prev = draw_concat(Gs,Zs,reals_masked,NoiseAmp,in_s,'rand',m_noise,m_image,opt)
                     prev = m_image(prev)
                 else:
-                    assert opt.experiment in [0, 2, 3]
+                    assert opt.experiment in [0, 2, 3, 200]
                     prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, 'rand', m_noise, m_image, opt)
                     prev = m_image(prev)
 
@@ -245,6 +250,7 @@ def train_single_scale(netD,netG,reals,reals_masked,masks,Gs,Zs,in_s,NoiseAmp,op
                     rec_loss = alpha * (loss(netG(Z_opt.detach(), z_prev), real_masked) - loss(netG(Z_opt.detach(), z_prev)[:,:,mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1],
                                                                                         real[:,:,mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1]))
                 else:
+                    assert opt.experiment in [0, 2, 3, 200]
                     rec_loss = alpha*loss(netG(Z_opt.detach(),z_prev),real)
 
                 rec_loss.backward(retain_graph=True)
