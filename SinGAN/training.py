@@ -15,6 +15,7 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
     real = imresize(real_,opt.scale1,opt)
     reals = functions.creat_reals_pyramid(real,reals,opt)
     nfc_prev = 0
+    Ds = []
 
     while scale_num<opt.stop_scale+1:
         opt.nfc = min(opt.nfc_init * pow(2, math.floor(scale_num / 4)), 128)
@@ -45,10 +46,13 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
 
         Gs.append(G_curr)
         Zs.append(z_curr)
+        Ds.append(D_curr)
         NoiseAmp.append(opt.noise_amp)
 
+        print(f"Saving model to {opt.out_}")
         torch.save(Zs, '%s/Zs.pth' % (opt.out_))
         torch.save(Gs, '%s/Gs.pth' % (opt.out_))
+        torch.save(Ds, '%s/Ds.pth' % (opt.out_))
         torch.save(reals, '%s/reals.pth' % (opt.out_))
         torch.save(NoiseAmp, '%s/NoiseAmp.pth' % (opt.out_))
 
@@ -56,8 +60,6 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
         nfc_prev = opt.nfc
         del D_curr,G_curr
     return
-
-
 
 def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
 
