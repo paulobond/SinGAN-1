@@ -233,13 +233,15 @@ def creat_reals_pyramid(real,opt,mask=None):
     return res, masks
 
 
-def load_trained_pyramid(opt, mode_='train'):
+def load_trained_pyramid(opt, mode_='train', dir=None):
     #dir = 'TrainedModels/%s/scale_factor=%f' % (opt.input_name[:-4], opt.scale_factor_init)
     mode = opt.mode
     opt.mode = 'train'
     if (mode == 'animation_train') | (mode == 'SR_train') | (mode == 'paint_train'):
         opt.mode = mode
-    dir = generate_dir2save(opt)
+    if dir is None:
+        dir = generate_dir2save(opt)
+        print(f"trying dir: {dir}")
     if(os.path.exists(dir)):
 
         if torch.cuda.is_available():
