@@ -5,6 +5,7 @@ from SinGAN.imresize import imresize
 from SinGAN.imresize import imresize_to_shape
 import SinGAN.functions as functions
 import os
+import copy
 
 if __name__ == '__main__':
 
@@ -124,6 +125,24 @@ if __name__ == '__main__':
         n += 1
         opt.reg = 0.5 * opt.reg  # decrease regularization param over time
         opt.disc_loss = 0.5 * opt.disc_loss
+
+
+def put_random_mask(image, n_pixels=20):
+
+    image = copy.deepcopy(image)
+    mask_size = (n_pixels, n_pixels)
+    offset_x = random.randint(1, max(image.shape[2] - mask_size[0] - 1, 2))
+    offset_y = random.randint(1, max(image.shape[3] - mask_size[1] - 1, 2))
+
+    image[:, :, offset_x:offset_x+mask_size[0], offset_y:offset_y+mask_size[1]] = -1
+
+    mask = {
+        'xmin': offset_x,
+        'xmax': offset_x+mask_size[0]-1,
+        'ymin': offset_y,
+        'ymax': offset_y+mask_size[1]-1
+    }
+    return image, mask
 
 
 def SinGAN_generate(Gs, Zs, reals, NoiseAmp, opt, in_s=None, scale_v=1, scale_h=1, n=0, gen_start_scale=0):
