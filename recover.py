@@ -84,6 +84,7 @@ if __name__ == '__main__':
         fake = img.imread('%s/%s' % (opt.fake_input_dir, opt.fake_input_name))
         fake = functions.np2torch(fake, opt)
         fake = imresize(fake, opt.scale1, opt)
+        fakes_bis = copy.deepcopy(fakes)
         fakes, _ = functions.creat_reals_pyramid(fake, opt, mask=mask)
 
     else:
@@ -144,6 +145,8 @@ if __name__ == '__main__':
                 diff4 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, :mask['ymax']],
                              image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymax']])
                 diff = diff1 + diff2 + diff3 + diff4
+                if i % 1000 == 0:
+                    print("YES")
             else:
                 diff = loss(fake, image_cur)
             errD = - D(image_cur).mean()
@@ -170,6 +173,7 @@ if __name__ == '__main__':
 
         plt.imsave(f'{dir_name}/{n}/reconstructed_image.png', functions.convert_image_np(image_cur.detach()), vmin=0, vmax=1)
         plt.imsave(f'{dir_name}/{n}/target_image.png', functions.convert_image_np(fake), vmin=0, vmax=1)
+        plt.imsave(f'{dir_name}/{n}/target_image_with_mask.png', functions.convert_image_np(fakes_bis[n]), vmin=0, vmax=1)
 
         n += 1
         opt.reg = 0.5 * opt.reg  # decrease regularization param over time
