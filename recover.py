@@ -79,6 +79,11 @@ if __name__ == '__main__':
     if opt.use_mask:
         fake, mask = put_mask(fake, n_pixels=opt.mask_size, offset_x=opt.mask_xmin, offset_y=opt.mask_ymin)
         fakes, masks = functions.creat_reals_pyramid(fake, opt, mask=mask)
+
+        # For testing purposes
+        fake = img.imread('%s/%s' % (opt.fake_input_dir, opt.fake_input_name))
+        fake = functions.np2torch(fake, opt)
+        fake = imresize(fake, opt.scale1, opt)
     else:
         fakes, masks = functions.creat_reals_pyramid(fake, opt, mask=None)
         assert masks == []
