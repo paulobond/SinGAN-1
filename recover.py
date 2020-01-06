@@ -81,11 +81,10 @@ if __name__ == '__main__':
         fakes, masks = functions.creat_reals_pyramid(fake, opt, mask=mask)
 
         # For testing purposes
-        fake = img.imread('%s/%s' % (opt.fake_input_dir, opt.fake_input_name))
-        fake = functions.np2torch(fake, opt)
-        fake = imresize(fake, opt.scale1, opt)
-        fakes_bis = copy.deepcopy(fakes)
-        fakes, _ = functions.creat_reals_pyramid(fake, opt, mask=mask)
+        fake_without_mask = img.imread('%s/%s' % (opt.fake_input_dir, opt.fake_input_name))
+        fake_without_mask = functions.np2torch(fake_without_mask, opt)
+        fake_without_mask = imresize(fake_without_mask, opt.scale1, opt)
+        fakes_without_mask, _ = functions.creat_reals_pyramid(fake_without_mask, opt, mask=mask)
 
     else:
         fakes, masks = functions.creat_reals_pyramid(fake, opt, mask=None)
@@ -131,27 +130,46 @@ if __name__ == '__main__':
         optimizer_z = optim.Adam([z_curr], lr=opt.lr_d)
         scheduler_z = torch.optim.lr_scheduler.MultiStepLR(optimizer=optimizer_z, milestones=[1600], gamma=opt.gamma)
 
+        if opt.use_mask:
+
+            W0 = copy.deepcopy(fake)
+            W0[:, :, :, :] = 1
+
+            W1 = copy.deepcopy(fake)
+            W1[:, :, :, :] = 0
+            W1[:, :, mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1] = 1
+
+            window_size = 5
+            W = copy.deepcopy(fake)
+            for i in range(W.shape[2]):
+                for j in range(W.shape[3]):
+                    n_neighbors = int(W0[0, 0, i-window_size:i+window_size+1, j-window_size:j+window_size+1].sum()) - 1
+                    assert n_neighbors > 0
+                    W[:, :, i, j] = float((W1[0, 0, i-window_size:i+window_size+1,
+                                            j-window_size:j+window_size+1]).sum()) / n_neighbors
+            W[:, :, mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1] = 0
+            W = W.sqrt()
+
         os.mkdir(f"{dir_name}/{n}")
         for i in range(10000):
             image_cur = G(noise_amp*z_curr + I_prev, I_prev)
             loss = nn.MSELoss()
             if opt.use_mask:
                 mask = masks[n]
+                diff = loss(W*fake, W*image_cur)
 
-                diff1 = loss(fake[:, :, 0:mask['xmin'], :], image_cur[:, :, 0:mask['xmin'], :])
+                # diff1 = loss(fake[:, :, 0:mask['xmin'], :], image_cur[:, :, 0:mask['xmin'], :])
+                #
+                # diff2 = loss(fake[:, :, mask['xmax']+1:, :], image_cur[:, :, mask['xmax']+1:, :])
+                #
+                # diff3 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:],
+                #              image_cur[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:])
+                #
+                # diff4 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']],
+                #              image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']])
+                #
+                # diff = diff1 + diff2 + diff3 + diff4
 
-                diff2 = loss(fake[:, :, mask['xmax']+1:, :], image_cur[:, :, mask['xmax']+1:, :])
-
-                diff3 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:],
-                             image_cur[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:])
-
-                diff4 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']],
-                             image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']])
-
-                diff = diff1 + diff2 + diff3 + diff4
-                if i % 1000 == 0:
-                    print("YES")
-                    print(mask)
             else:
                 diff = loss(fake, image_cur)
             errD = - D(image_cur).mean()
@@ -176,9 +194,12 @@ if __name__ == '__main__':
                                 f'Max |z|: {z_curr.abs().max()}\n'
                                 f'Error Discriminator: {- D(image_cur).mean()}\n\n\n')
 
-        plt.imsave(f'{dir_name}/{n}/reconstructed_image.png', functions.convert_image_np(image_cur.detach()), vmin=0, vmax=1)
+        plt.imsave(f'{dir_name}/{n}/reconstructed_image.png', functions.convert_image_np(image_cur.detach()), vmin=0,
+                   vmax=1)
         plt.imsave(f'{dir_name}/{n}/target_image.png', functions.convert_image_np(fake), vmin=0, vmax=1)
-        plt.imsave(f'{dir_name}/{n}/target_image_with_mask.png', functions.convert_image_np(fakes_bis[n]), vmin=0, vmax=1)
+        if opt.use_mask:
+            plt.imsave(f'{dir_name}/{n}/target_image_with_mask.png', functions.convert_image_np(fakes_without_mask[n]),
+                       vmin=0, vmax=1)
 
         n += 1
         opt.reg = 0.75 * opt.reg  # decrease regularization param over time
