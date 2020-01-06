@@ -18,12 +18,15 @@ if __name__ == '__main__':
     parser.add_argument('--reg', help='regularization parameter', default=0.05)
     parser.add_argument('--disc_loss', help='discrimination loss', default=0.01)
 
+    parser.add_argument('--use_zopt', help='use z_opt to initialize z', default=False)
+
+
     opt = parser.parse_args()
     opt.mode = 'train'
     opt = functions.post_config(opt)
 
     # Output dir
-    dir_name = f'Recover/{opt.input_name[:-4]}_{opt.fake_input_name[:-4]}'
+    dir_name = f'Recover/{opt.input_name[:-4]}_{opt.fake_input_name[:-4]}_{opt.reg}_{opt.disc_loss}_{opt.use_zopt}'
     os.makedirs(dir_name, exist_ok=True)
 
     # LOAD MODEL #
@@ -64,13 +67,16 @@ if __name__ == '__main__':
         nzy = (Z_opt.shape[3] - pad1 * 2)
         image_prev = image_cur
 
-        if n == 0:
-            z_curr = functions.generate_noise([1, nzx, nzy], device=opt.device)
-            z_curr = z_curr.expand(1, 3, z_curr.shape[2], z_curr.shape[3])
-            z_curr = m(z_curr)
+        if opt.use_zopt:
+            z_curr = Z_opt
         else:
-            z_curr = functions.generate_noise([opt.nc_z,nzx,nzy], device=opt.device)
-            z_curr = m(z_curr)
+            if n == 0:
+                z_curr = functions.generate_noise([1, nzx, nzy], device=opt.device)
+                z_curr = z_curr.expand(1, 3, z_curr.shape[2], z_curr.shape[3])
+                z_curr = m(z_curr)
+            else:
+                z_curr = functions.generate_noise([opt.nc_z,nzx,nzy], device=opt.device)
+                z_curr = m(z_curr)
 
         if image_prev is None:
             I_prev = m(in_s)
