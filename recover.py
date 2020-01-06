@@ -139,7 +139,7 @@ if __name__ == '__main__':
             W1[:, :, :, :] = 0
             W1[:, :, mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1] = 1
 
-            window_size = 5
+            window_size = 8
             W = copy.deepcopy(fake)
             for i in range(W.shape[2]):
                 for j in range(W.shape[3]):
