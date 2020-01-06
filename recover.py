@@ -129,10 +129,10 @@ if __name__ == '__main__':
             loss = nn.MSELoss()
             if opt.use_mask:
                 mask = masks[n]
-                diff = loss(fake, image_cur) - loss(fake[0,0,mask['xmin']:mask['xmax']+1,mask['ymin']:mask['ymax']+1],
-                                                    image_cur[0,0,mask['xmin']:mask['xmax']+1,mask['ymin']:mask['ymax']+1])
+                diff = loss(fake, image_cur) - loss(fake[:,:,mask['xmin']:mask['xmax']+1,mask['ymin']:mask['ymax']+1],
+                                                    image_cur[:,:,mask['xmin']:mask['xmax']+1,mask['ymin']:mask['ymax']+1])
             else:
-                diff = loss(fake, image_cur)
+                diff = loss(fake[], image_cur)
             errD = - D(image_cur).mean()
             (diff + opt.reg * z_curr.abs().mean() + opt.disc_loss * errD).backward(retain_graph=True)
             optimizer_z.step()
@@ -144,6 +144,8 @@ if __name__ == '__main__':
                 print(f"Mean |z|: {z_curr.abs().mean()}")
                 print(f"Max |z|: {z_curr.abs().max()}")
                 print(f"Error Discriminator: {- D(image_cur).mean()}")
+                print(f"Image shape: {fake.shape}")
+                print(f"Mask: {mask}")
 
                 with open(f"{dir_name}/{n}/report.txt", 'a') as txt_f:
                     txt_f.write(f'Iteration {i}  (reg: {opt.reg}; disc loss weight: {opt.disc_loss};'
