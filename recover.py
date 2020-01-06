@@ -129,8 +129,14 @@ if __name__ == '__main__':
             loss = nn.MSELoss()
             if opt.use_mask:
                 mask = masks[n]
-                diff = loss(fake, image_cur) - loss(fake[:,:,mask['xmin']:mask['xmax']+1,mask['ymin']:mask['ymax']+1],
-                                                    image_cur[:,:,mask['xmin']:mask['xmax']+1,mask['ymin']:mask['ymax']+1])
+
+                diff1 = loss(fake[:, :, 0:mask['xmin'], :], image_cur[:, :, 0:mask['xmin'], :])
+                diff2 = loss(fake[:, :, mask['xmax']+1:, :], image_cur[:, :, mask['xmax']+1:, :])
+                diff3 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:],
+                             image_cur[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:])
+                diff4 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, :mask['ymax']],
+                             image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymax']])
+                diff = diff1 + diff2 + diff3 + diff4
             else:
                 diff = loss(fake, image_cur)
             errD = - D(image_cur).mean()
