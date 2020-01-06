@@ -132,7 +132,7 @@ if __name__ == '__main__':
                 diff = loss(fake, image_cur) - loss(fake[:,:,mask['xmin']:mask['xmax']+1,mask['ymin']:mask['ymax']+1],
                                                     image_cur[:,:,mask['xmin']:mask['xmax']+1,mask['ymin']:mask['ymax']+1])
             else:
-                diff = loss(fake[], image_cur)
+                diff = loss(fake, image_cur)
             errD = - D(image_cur).mean()
             (diff + opt.reg * z_curr.abs().mean() + opt.disc_loss * errD).backward(retain_graph=True)
             optimizer_z.step()
