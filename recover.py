@@ -84,6 +84,8 @@ if __name__ == '__main__':
         fake = img.imread('%s/%s' % (opt.fake_input_dir, opt.fake_input_name))
         fake = functions.np2torch(fake, opt)
         fake = imresize(fake, opt.scale1, opt)
+        fakes, _ = functions.creat_reals_pyramid(fake, opt, mask=mask)
+
     else:
         fakes, masks = functions.creat_reals_pyramid(fake, opt, mask=None)
         assert masks == []
