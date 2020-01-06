@@ -15,8 +15,8 @@ if __name__ == '__main__':
     parser.add_argument('--fake_input_dir', help='input image dir', default='Input/Images')
     parser.add_argument('--fake_input_name', help='training image name', required=True)
 
-    parser.add_argument('--alpha', help='regularization parameter', default=0.05)
-    parser.add_argument('--beta', help='discrimination loss', default=0.01)
+    parser.add_argument('--reg', help='regularization parameter', default=0.05)
+    parser.add_argument('--disc_loss', help='discrimination loss', default=0.01)
 
     opt = parser.parse_args()
     opt.mode = 'train'
@@ -93,7 +93,7 @@ if __name__ == '__main__':
             loss = nn.MSELoss()
             diff = loss(fake, image_cur)
             errD = - D(image_cur).mean()
-            (diff + opt.alpha * z_curr.abs().mean() + opt.beta * errD).backward(retain_graph=True)
+            (diff + opt.reg * z_curr.abs().mean() + opt.disc_loss * errD).backward(retain_graph=True)
             optimizer_z.step()
             # print(z_curr[0,0,10:15,10:15])
             if i % 1000 == 0:
@@ -114,8 +114,8 @@ if __name__ == '__main__':
         plt.imsave(f'{dir_name}/{n}/target_image.png', functions.convert_image_np(fake), vmin=0, vmax=1)
 
         n += 1
-        opt.alpha = 0.5 * opt.alpha  # decrease regularization param over time
-        opt.beta = 0.5 * opt.beta
+        opt.reg = 0.5 * opt.reg  # decrease regularization param over time
+        opt.disc_loss = 0.5 * opt.disc_loss
 
 
 def SinGAN_generate(Gs, Zs, reals, NoiseAmp, opt, in_s=None, scale_v=1, scale_h=1, n=0, gen_start_scale=0):
