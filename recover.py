@@ -143,10 +143,11 @@ if __name__ == '__main__':
             W = copy.deepcopy(fake)
             for i in range(W.shape[2]):
                 for j in range(W.shape[3]):
-                    n_neighbors = int(W0[0, 0, i-window_size:i+window_size+1, j-window_size:j+window_size+1].sum()) - 1
+                    n_neighbors = int(W0[0, 0, max(i-window_size,0):i+window_size+1,
+                                      max(0,j-window_size):j+window_size+1].sum()) - 1
                     assert n_neighbors > 0
-                    W[:, :, i, j] = float((W1[0, 0, i-window_size:i+window_size+1,
-                                            j-window_size:j+window_size+1]).sum()) / n_neighbors
+                    W[:, :, i, j] = float((W1[0, 0, max(0,i-window_size):i+window_size+1,
+                                            max(0,j-window_size):j+window_size+1]).sum()) / n_neighbors
             W[:, :, mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1] = 0
             W = W.sqrt()
 
