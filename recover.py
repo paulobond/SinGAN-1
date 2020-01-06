@@ -15,10 +15,10 @@ if __name__ == '__main__':
     parser.add_argument('--fake_input_dir', help='input image dir', default='Input/Images')
     parser.add_argument('--fake_input_name', help='training image name', required=True)
 
-    parser.add_argument('--reg', help='regularization parameter', default=0.05)
-    parser.add_argument('--disc_loss', help='discrimination loss', default=0.01)
+    parser.add_argument('--reg', help='regularization parameter', type=float, default=0.05)
+    parser.add_argument('--disc_loss', help='discrimination loss', type=float, default=0.01)
 
-    parser.add_argument('--use_zopt', help='use z_opt to initialize z', default=False)
+    parser.add_argument('--use_zopt', help='use z_opt to initialize z', type=bool, default=False)
 
 
     opt = parser.parse_args()
