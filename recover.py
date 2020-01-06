@@ -103,14 +103,16 @@ if __name__ == '__main__':
             optimizer_z.step()
             # print(z_curr[0,0,10:15,10:15])
             if i % 1000 == 0:
-                print(f"** Iteration {i} **")
+                print(f"** Iteration {i} ** (reg: {opt.reg}; disc loss weight: {opt.disc_loss}; use zopt:"
+                      f" {opt.use_zopt})")
                 print(f"MSE Loss: {loss(fake, image_cur)}")
                 print(f"Mean |z|: {z_curr.abs().mean()}")
                 print(f"Max |z|: {z_curr.abs().max()}")
                 print(f"Error Discriminator: {- D(image_cur).mean()}")
 
                 with open(f"{dir_name}/{n}/report.txt", 'a') as txt_f:
-                    txt_f.write(f'Iteration {i}\n'
+                    txt_f.write(f'Iteration {i}  (reg: {opt.reg}; disc loss weight: {opt.disc_loss};'
+                                f' use zopt: {opt.use_zopt})\n'
                                 f'MSE loss: {loss(fake, image_cur)}\n'
                                 f'Mean |z|: {z_curr.abs().mean()}\n'
                                 f'Max |z|: {z_curr.abs().max()}\n'
