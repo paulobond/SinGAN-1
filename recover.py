@@ -149,7 +149,7 @@ if __name__ == '__main__':
                     W[:, :, i, j] = float((W1[0, 0, max(0,i-window_size):i+window_size+1,
                                             max(0,j-window_size):j+window_size+1]).sum()) / n_neighbors
             W[:, :, mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1] = 0
-            W = W.sqrt()
+            W = (1000*W).sqrt()
 
         os.mkdir(f"{dir_name}/{n}")
         for i in range(10000):
