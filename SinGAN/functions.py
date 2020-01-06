@@ -74,16 +74,17 @@ def convert_image_np_2d(inp):
     # inp = std*
     return inp
 
-def generate_noise(size,num_samp=1,device='cuda',type='gaussian', scale=1):
+def generate_noise(size,num_samp=1,device='cuda',type='gaussian', scale=1, requires_grad=False):
     if type == 'gaussian':
-        noise = torch.randn(num_samp, size[0], round(size[1]/scale), round(size[2]/scale), device=device)
+        noise = torch.randn(num_samp, size[0], round(size[1]/scale), round(size[2]/scale), device=device,
+                            requires_grad=requires_grad)
         noise = upsampling(noise,size[1], size[2])
     if type =='gaussian_mixture':
-        noise1 = torch.randn(num_samp, size[0], size[1], size[2], device=device)+5
-        noise2 = torch.randn(num_samp, size[0], size[1], size[2], device=device)
+        noise1 = torch.randn(num_samp, size[0], size[1], size[2], device=device,requires_grad=requires_grad)+5
+        noise2 = torch.randn(num_samp, size[0], size[1], size[2], device=device,requires_grad=requires_grad)
         noise = noise1+noise2
     if type == 'uniform':
-        noise = torch.randn(num_samp, size[0], size[1], size[2], device=device)
+        noise = torch.randn(num_samp, size[0], size[1], size[2], device=device,requires_grad=requires_grad)
     return noise
 
 def plot_learning_curves(G_loss,D_loss,epochs,label1,label2,name):
