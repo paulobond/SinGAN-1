@@ -181,8 +181,8 @@ if __name__ == '__main__':
         plt.imsave(f'{dir_name}/{n}/target_image_with_mask.png', functions.convert_image_np(fakes_bis[n]), vmin=0, vmax=1)
 
         n += 1
-        opt.reg = 0.5 * opt.reg  # decrease regularization param over time
-        opt.disc_loss = 0.5 * opt.disc_loss
+        opt.reg = 0.75 * opt.reg  # decrease regularization param over time
+        opt.disc_loss = 0.75 * opt.disc_loss
 
 
 def SinGAN_generate(Gs, Zs, reals, NoiseAmp, opt, in_s=None, scale_v=1, scale_h=1, n=0, gen_start_scale=0):
