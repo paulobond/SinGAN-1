@@ -12,6 +12,7 @@ from skimage import color, morphology, filters
 from SinGAN.imresize import imresize
 import os
 import random
+import copy
 from sklearn.cluster import KMeans
 
 
@@ -219,14 +220,41 @@ def adjust_scales2image_SR(real_,opt):
     opt.stop_scale = opt.num_scales - scale2stop
     return real
 
-def creat_reals_pyramid(real,reals,opt):
+
+def creat_reals_pyramid(real, opt, mask=None):
     real = real[:,0:3,:,:]
+    res = []
+    masks = []
     for i in range(0,opt.stop_scale+1,1):
         scale = math.pow(opt.scale_factor,opt.stop_scale-i)
         curr_real = imresize(real,scale,opt)
-        reals.append(curr_real)
-    return reals
+        if mask:
+            masks.append(get_downsampled_mask(real, scale, opt, mask))
+        res.append(curr_real)
+    return res, masks
 
+
+def get_downsampled_mask(real, scale, opt, mask):
+    real_2 = copy.deepcopy(real)
+    real_2[:,:,:,:] = 0
+    for i in range(mask['xmin'], mask['xmax']+1):
+        for j in range(mask['ymin'], mask['ymax']+1):
+            real_2[:,:,i,j] = 1
+    downsampled = imresize(real_2, scale, opt)
+    xs = []
+    ys = []
+    for i in range(downsampled.shape[2]):
+        for j in range(downsampled.shape[3]):
+            if downsampled[0, 0, i, j] > 0:
+                xs.append(i)
+                ys.append(j)
+    new_mask = {
+        'xmin': min(xs),
+        'xmax': max(xs),
+        'ymin': min(ys),
+        'ymax': max(ys)
+    }
+    return new_mask
 
 def load_trained_pyramid(opt, mode_='train'):
     #dir = 'TrainedModels/%s/scale_factor=%f' % (opt.input_name[:-4], opt.scale_factor_init)

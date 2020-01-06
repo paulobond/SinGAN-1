@@ -7,6 +7,27 @@ import SinGAN.functions as functions
 import os
 import copy
 
+
+def put_mask(image, n_pixels=30, offset_x=None, offset_y=None):
+    image = copy.deepcopy(image)
+    mask_size = (n_pixels, n_pixels)
+
+    if offset_x is None:
+        offset_x = random.randint(1, max(image.shape[2] - mask_size[0] - 1, 2))
+    if offset_y is None:
+        offset_y = random.randint(1, max(image.shape[3] - mask_size[1] - 1, 2))
+
+    image[:, :, offset_x:offset_x + mask_size[0], offset_y:offset_y + mask_size[1]] = -1
+
+    mask = {
+        'xmin': offset_x,
+        'xmax': offset_x + mask_size[0] - 1,
+        'ymin': offset_y,
+        'ymax': offset_y + mask_size[1] - 1
+    }
+    return image, mask
+
+
 if __name__ == '__main__':
 
     parser = get_arguments()
@@ -21,13 +42,17 @@ if __name__ == '__main__':
 
     parser.add_argument('--use_zopt', help='use z_opt to initialize z', type=bool, default=False)
 
+    parser.add_argument('--use_mask', help='fake input has mask for inpainting', type=bool, default=False)
+    parser.add_argument('--mask_size', help='mask is a square, specify size', type=int, default=30)
+    parser.add_argument('--mask_xmin', help='mask is a square, specify size', type=int, default=None)
+    parser.add_argument('--mask_ymin', help='mask is a square, specify size', type=int, default=None)
 
     opt = parser.parse_args()
     opt.mode = 'train'
     opt = functions.post_config(opt)
 
     # Output dir
-    dir_name = f'Recover/{opt.input_name[:-4]}_{opt.fake_input_name[:-4]}_{opt.reg}_{opt.disc_loss}_{opt.use_zopt}'
+    dir_name = f'Recover/{opt.input_name[:-4]}_{opt.fake_input_name[:-4]}_{opt.reg}_{opt.disc_loss}_{opt.use_zopt}_{opt.use_mask}'
     os.makedirs(dir_name, exist_ok=True)
 
     # LOAD MODEL #
@@ -51,8 +76,12 @@ if __name__ == '__main__':
     fake = img.imread('%s/%s' % (opt.fake_input_dir, opt.fake_input_name))
     fake = functions.np2torch(fake, opt)
     fake = imresize(fake, opt.scale1, opt)
-    fakes = []
-    fakes = functions.creat_reals_pyramid(fake, fakes, opt)
+    if opt.use_mask:
+        fake, mask = put_mask(fake, n_pixels=opt.mask_size, offset_x=opt.mask_xmin, offset_y=opt.mask_ymin)
+        fakes, masks = functions.creat_reals_pyramid(fake, opt, mask=mask)
+    else:
+        fakes, masks = functions.creat_reals_pyramid(fake, opt, mask=None)
+        assert masks == []
 
     in_s = torch.full(reals[0].shape, 0, device=opt.device)
     image_cur = None
@@ -98,7 +127,12 @@ if __name__ == '__main__':
         for i in range(10000):
             image_cur = G(noise_amp*z_curr + I_prev, I_prev)
             loss = nn.MSELoss()
-            diff = loss(fake, image_cur)
+            if opt.use_mask:
+                mask = masks[n]
+                diff = loss(fake, image_cur) - loss(fake[0,0,mask['xmin']:mask['xmax']+1,mask['ymin']:mask['ymax']+1],
+                                                    image_cur[0,0,mask['xmin']:mask['xmax']+1,mask['ymin']:mask['ymax']+1])
+            else:
+                diff = loss(fake, image_cur)
             errD = - D(image_cur).mean()
             (diff + opt.reg * z_curr.abs().mean() + opt.disc_loss * errD).backward(retain_graph=True)
             optimizer_z.step()
@@ -125,47 +159,6 @@ if __name__ == '__main__':
         n += 1
         opt.reg = 0.5 * opt.reg  # decrease regularization param over time
         opt.disc_loss = 0.5 * opt.disc_loss
-
-
-def put_random_mask(image, n_pixels=20):
-
-    image = copy.deepcopy(image)
-    mask_size = (n_pixels, n_pixels)
-    offset_x = random.randint(1, max(image.shape[2] - mask_size[0] - 1, 2))
-    offset_y = random.randint(1, max(image.shape[3] - mask_size[1] - 1, 2))
-
-    image[:, :, offset_x:offset_x+mask_size[0], offset_y:offset_y+mask_size[1]] = -1
-
-    mask = {
-        'xmin': offset_x,
-        'xmax': offset_x+mask_size[0]-1,
-        'ymin': offset_y,
-        'ymax': offset_y+mask_size[1]-1
-    }
-    return image, mask
-
-
-def get_downsampled_mask(real, scale, opt, mask):
-    real_2 = copy.deepcopy(real)
-    real_2[:,:,:,:] = 0
-    for i in range(mask['xmin'], mask['xmax']+1):
-        for j in range(mask['ymin'], mask['ymax']+1):
-            real_2[:,:,i,j] = 1
-    downsampled = imresize(real_2, scale, opt)
-    xs = []
-    ys = []
-    for i in range(downsampled.shape[2]):
-        for j in range(downsampled.shape[3]):
-            if downsampled[0, 0, i, j] > 0:
-                xs.append(i)
-                ys.append(j)
-    new_mask = {
-        'xmin': min(xs),
-        'xmax': max(xs),
-        'ymin': min(ys),
-        'ymax': max(ys)
-    }
-    return new_mask
 
 
 def SinGAN_generate(Gs, Zs, reals, NoiseAmp, opt, in_s=None, scale_v=1, scale_h=1, n=0, gen_start_scale=0):
