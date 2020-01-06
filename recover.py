@@ -139,14 +139,19 @@ if __name__ == '__main__':
                 mask = masks[n]
 
                 diff1 = loss(fake[:, :, 0:mask['xmin'], :], image_cur[:, :, 0:mask['xmin'], :])
+
                 diff2 = loss(fake[:, :, mask['xmax']+1:, :], image_cur[:, :, mask['xmax']+1:, :])
+
                 diff3 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:],
                              image_cur[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:])
-                diff4 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, :mask['ymax']],
-                             image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymax']])
+
+                diff4 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']],
+                             image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']])
+
                 diff = diff1 + diff2 + diff3 + diff4
                 if i % 1000 == 0:
                     print("YES")
+                    print(mask)
             else:
                 diff = loss(fake, image_cur)
             errD = - D(image_cur).mean()
@@ -156,7 +161,7 @@ if __name__ == '__main__':
             if i % 1000 == 0:
                 print(f"** Iteration {i} ** (reg: {opt.reg}; disc loss weight: {opt.disc_loss}; use zopt:"
                       f" {opt.use_zopt})")
-                print(f"MSE Loss: {loss(fake, image_cur)}")
+                print(f"MSE Loss: {diff}")
                 print(f"Mean |z|: {z_curr.abs().mean()}")
                 print(f"Max |z|: {z_curr.abs().max()}")
                 print(f"Error Discriminator: {- D(image_cur).mean()}")
