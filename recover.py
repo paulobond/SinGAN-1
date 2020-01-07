@@ -284,7 +284,7 @@ if __name__ == '__main__':
             mask = masks[n]
 
             for i in range(mask['xmin'], mask['xmax']+1):
-                for j in range(mask['ymin'], max['ymax']+1):
+                for j in range(mask['ymin'], mask['ymax']+1):
                     new_image[:,:,i,j] = image_cur[:,:,i,j]
 
             plt.imsave(f'{dir_name}/{n}/full_reconstruction_after_copy_paste_png',
