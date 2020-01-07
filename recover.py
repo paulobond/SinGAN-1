@@ -159,6 +159,12 @@ if __name__ == '__main__':
         #     W[:, :, :, :] = 1
         #     W[:, :, mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1] = 0
 
+
+        def custom_loss(tensor_list_1, tensor_list_2):
+            a = sum([((t1-t2)**2).sum() for t1, t2 in zip(tensor_list_1, tensor_list_2)])
+            norm = sum([i*j for i, j in [(t.shape[2], t.shape[3]) for t in tensor_list_1]])
+            return a/norm
+
         os.mkdir(f"{dir_name}/{n}")
         for i in range(10000):
             image_cur = G(noise_amp*z_curr + I_prev, I_prev)
@@ -173,56 +179,62 @@ if __name__ == '__main__':
 
                 # diff = loss(W*fake, W*image_cur)
 
-                differences = []
-                maximum_dist = max(image_cur.shape[2], image_cur.shape[3]) + 2
-                for dist in range(1, maximum_dist):
+                # differences = []
+                # maximum_dist = max(image_cur.shape[2], image_cur.shape[3]) + 2
+                # for dist in range(1, maximum_dist):
+                #
+                #     if xmin-dist >= 0:
+                #         diff1 = loss(fake[:, :, xmin-dist, max(0, ymin-dist):(ymax+dist+1)],
+                #                      image_cur[:, :, xmin-dist, max(0, ymin-dist):(ymax+dist+1)])
+                #     else:
+                #         diff1 = 0
+                #
+                #     if xmax+dist < image_cur.shape[2]:
+                #         diff2 = loss(fake[:, :, xmax+dist, max(0, ymin-dist):(ymax+dist+1)],
+                #                      image_cur[:, :, xmax+dist, max(0, ymin-dist):(ymax+dist+1)])
+                #     else:
+                #         diff2 = 0
+                #
+                #     if ymin-dist >= 0:
+                #         diff3 = loss(fake[:, :, xmin:xmax+1, ymin-dist],
+                #                      image_cur[:, :, xmin:xmax+1, ymin-dist])
+                #     else:
+                #         diff3 = 0
+                #
+                #     if ymin+dist < image_cur.shape[3]:
+                #         diff4 = loss(fake[:, :, xmin:xmax+1, ymin+dist],
+                #                      image_cur[:, :, xmin:xmax+1, ymin+dist])
+                #     else:
+                #         diff4 = 0
+                #
+                #     diff_i = 1 * (diff1 + diff2 + diff3 + diff4)
+                #
+                #     differences.append(diff_i)
+                #
+                # diff = sum(differences)
 
-                    if xmin-dist >= 0:
-                        diff1 = loss(fake[:, :, xmin-dist, max(0, ymin-dist):(ymax+dist+1)],
-                                     image_cur[:, :, xmin-dist, max(0, ymin-dist):(ymax+dist+1)])
-                    else:
-                        diff1 = 0
+                # diff1 = loss(fake[:, :, 0:mask['xmin'], :], image_cur[:, :, 0:mask['xmin'], :])
+                #
+                # diff2 = loss(fake[:, :, mask['xmax']+1:, :], image_cur[:, :, mask['xmax']+1:, :])
+                #
+                # diff3 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:],
+                #              image_cur[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:])
+                #
+                # diff4 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']],
+                #              image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']])
+                # diff = diff1 + diff2 + diff3 + diff4
 
-                    if xmax+dist < image_cur.shape[2]:
-                        diff2 = loss(fake[:, :, xmax+dist, max(0, ymin-dist):(ymax+dist+1)],
-                                     image_cur[:, :, xmax+dist, max(0, ymin-dist):(ymax+dist+1)])
-                    else:
-                        diff2 = 0
+                fake_parts = [fake[:, :, 0:mask['xmin'], :],
+                              fake[:, :, mask['xmax'] + 1:, :],
+                              fake[:, :, mask['xmin']:mask['xmax'] + 1, mask['ymax'] + 1:],
+                              fake[:, :, mask['xmin']:mask['xmax'] + 1, :mask['ymin']]
+                              ]
+                image_cur_parts = [image_cur[:, :, 0:mask['xmin'], :],
+                                   image_cur[:, :, mask['xmax']+1:, :],
+                                   image_cur[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:],
+                                   image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']]]
 
-                    if ymin-dist >= 0:
-                        diff3 = loss(fake[:, :, xmin:xmax+1, ymin-dist],
-                                     image_cur[:, :, xmin:xmax+1, ymin-dist])
-                    else:
-                        diff3 = 0
-
-                    if ymin+dist < image_cur.shape[3]:
-                        diff4 = loss(fake[:, :, xmin:xmax+1, ymin+dist],
-                                     image_cur[:, :, xmin:xmax+1, ymin+dist])
-                    else:
-                        diff4 = 0
-
-                    diff_i = 1 * (diff1 + diff2 + diff3 + diff4)
-
-                    differences.append(diff_i)
-
-                diff = sum(differences)
-
-                diff1 = loss(fake[:, :, 0:mask['xmin'], :], image_cur[:, :, 0:mask['xmin'], :])
-
-                diff2 = loss(fake[:, :, mask['xmax']+1:, :], image_cur[:, :, mask['xmax']+1:, :])
-
-                diff3 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:],
-                             image_cur[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:])
-
-                diff4 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']],
-                             image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']])
-
-                diffbis = diff1 + diff2 + diff3 + diff4
-
-                print("****************")
-                print(f"Diff 1 : {diff}")
-                print(f"Diff bis: {diffbis}")
-                print("****************")
+                diff = custom_loss(fake_parts, image_cur_parts)
 
             else:
                 diff = loss(fake, image_cur)
