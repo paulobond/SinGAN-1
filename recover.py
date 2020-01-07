@@ -171,6 +171,7 @@ if __name__ == '__main__':
             return a/norm
 
         os.mkdir(f"{dir_name}/{n}")
+        disc_mask_zone, disc_output_shape = None, None
         for i in range(10000):
             image_cur = G(noise_amp*z_curr + I_prev, I_prev)
             loss = nn.MSELoss()
@@ -235,7 +236,17 @@ if __name__ == '__main__':
 
             else:
                 diff = loss(fake, image_cur)
-            errD = - D(image_cur).mean()
+
+            if opt.use_mask:
+                mask = masks[n]
+                disc_mask_zone, disc_output_shape = models.get_mask_discriminator(image_cur, mask, opt,
+                                                                                  expand_mask_by=7)
+                xmin, xmax = disc_mask_zone['xmin'], disc_mask_zone['xmax']
+                ymin, ymax = disc_mask_zone['ymin'], disc_mask_zone['ymax']
+                errD = - D(image_cur)[:, :, xmin:xmax+1, ymin:ymax+1].mean()
+            else:
+                errD = - D(image_cur).mean()
+
             (diff + opt.reg * z_curr.abs().mean() + opt.disc_loss * errD).backward(retain_graph=True)
             optimizer_z.step()
             # print(z_curr[0,0,10:15,10:15])
@@ -248,6 +259,9 @@ if __name__ == '__main__':
                 print(f"Error Discriminator: {- D(image_cur).mean()}")
                 print(f"Image shape: {fake.shape}")
                 print(f"Mask: {mask}")
+                if disc_mask_zone is not None:
+                    print(f"Discriminator output shape: {disc_output_shape}")
+                    print(f"Discriminator mask influence zone: {disc_mask_zone}")
 
                 with open(f"{dir_name}/{n}/report.txt", 'a') as txt_f:
                     txt_f.write(f'Iteration {i}  (reg: {opt.reg}; disc loss weight: {opt.disc_loss};'
@@ -263,6 +277,20 @@ if __name__ == '__main__':
         if opt.use_mask:
             plt.imsave(f'{dir_name}/{n}/target_image_without_mask.png', functions.convert_image_np(fakes_without_mask[n]),
                        vmin=0, vmax=1)
+
+        # Full reconstruction: copy paste the square in the good zone
+        if opt.use_mask:
+            new_image = copy.deepcopy(fake)
+            mask = masks[n]
+
+            for i in range(mask['xmin'], mask['xmax']+1):
+                for j in range(mask['ymin'], max['ymax']+1):
+                    new_image[:,:,i,j] = image_cur[:,:,i,j]
+
+            plt.imsave(f'{dir_name}/{n}/full_reconstruction_after_copy_paste_png',
+                       functions.convert_image_np(new_image.detach()),
+                       vmin=0,
+                       vmax=1)
 
         n += 1
 
