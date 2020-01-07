@@ -130,26 +130,34 @@ if __name__ == '__main__':
         optimizer_z = optim.Adam([z_curr], lr=opt.lr_d)
         scheduler_z = torch.optim.lr_scheduler.MultiStepLR(optimizer=optimizer_z, milestones=[1600], gamma=opt.gamma)
 
+
+        # COMPLEX WEIGHT ##
+        # if opt.use_mask:
+        #
+        #     W0 = copy.deepcopy(fake)
+        #     W0[:, :, :, :] = 1
+        #
+        #     W1 = copy.deepcopy(fake)
+        #     W1[:, :, :, :] = 0
+        #     W1[:, :, mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1] = 1
+        #
+        #     window_size = 8
+        #     W = copy.deepcopy(fake)
+        #     for i in range(W.shape[2]):
+        #         for j in range(W.shape[3]):
+        #             n_neighbors = int(W0[0, 0, max(i-window_size,0):i+window_size+1,
+        #                               max(0,j-window_size):j+window_size+1].sum()) - 1
+        #             assert n_neighbors > 0
+        #             W[:, :, i, j] = float((W1[0, 0, max(0,i-window_size):i+window_size+1,
+        #                                     max(0,j-window_size):j+window_size+1]).sum()) / n_neighbors
+        #     W[:, :, mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1] = 0
+        #     W = (1000*W).sqrt()
+
+        # SIMPLE WEIGHT
         if opt.use_mask:
-
-            W0 = copy.deepcopy(fake)
-            W0[:, :, :, :] = 1
-
-            W1 = copy.deepcopy(fake)
-            W1[:, :, :, :] = 0
-            W1[:, :, mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1] = 1
-
-            window_size = 8
             W = copy.deepcopy(fake)
-            for i in range(W.shape[2]):
-                for j in range(W.shape[3]):
-                    n_neighbors = int(W0[0, 0, max(i-window_size,0):i+window_size+1,
-                                      max(0,j-window_size):j+window_size+1].sum()) - 1
-                    assert n_neighbors > 0
-                    W[:, :, i, j] = float((W1[0, 0, max(0,i-window_size):i+window_size+1,
-                                            max(0,j-window_size):j+window_size+1]).sum()) / n_neighbors
+            W[:, :, :, :] = 1
             W[:, :, mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1] = 0
-            W = (1000*W).sqrt()
 
         os.mkdir(f"{dir_name}/{n}")
         for i in range(10000):
@@ -199,7 +207,7 @@ if __name__ == '__main__':
                    vmax=1)
         plt.imsave(f'{dir_name}/{n}/target_image.png', functions.convert_image_np(fake), vmin=0, vmax=1)
         if opt.use_mask:
-            plt.imsave(f'{dir_name}/{n}/target_image_with_mask.png', functions.convert_image_np(fakes_without_mask[n]),
+            plt.imsave(f'{dir_name}/{n}/target_image_without_mask.png', functions.convert_image_np(fakes_without_mask[n]),
                        vmin=0, vmax=1)
 
         n += 1
