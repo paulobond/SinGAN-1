@@ -268,8 +268,6 @@ if __name__ == '__main__':
                        vmin=0, vmax=1)
 
         n += 1
-        opt.reg = 0.75 * opt.reg  # decrease regularization param over time
-        opt.disc_loss = 0.75 * opt.disc_loss
 
 
 def SinGAN_generate(Gs, Zs, reals, NoiseAmp, opt, in_s=None, scale_v=1, scale_h=1, n=0, gen_start_scale=0):
