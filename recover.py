@@ -174,7 +174,7 @@ if __name__ == '__main__':
                 # diff = loss(W*fake, W*image_cur)
 
                 differences = []
-                maximum_dist = max(image_cur.shape[3], image_cur.shape[4]) + 2
+                maximum_dist = max(image_cur.shape[2], image_cur.shape[3]) + 2
                 for dist in range(1, maximum_dist):
 
                     if xmin-dist >= 0:
