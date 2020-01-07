@@ -165,6 +165,11 @@ if __name__ == '__main__':
             norm = sum([i*j for i, j in [(t.shape[2], t.shape[3]) for t in tensor_list_1]])
             return a/norm
 
+        def custom_loss_bis(tensor_list_1, tensor_list_2):
+            a = sum([((t1-t2)**2).sum() for t1, t2 in zip(tensor_list_1, tensor_list_2)])
+            norm = sum([j for j in [t.shape[-1] for t in tensor_list_1]])
+            return a/norm
+
         os.mkdir(f"{dir_name}/{n}")
         for i in range(10000):
             image_cur = G(noise_amp*z_curr + I_prev, I_prev)
@@ -226,7 +231,7 @@ if __name__ == '__main__':
 
                     differences.append(diff_i)
 
-                diff = custom_loss(fake_parts, image_cur_parts)
+                diff = custom_loss_bis(fake_parts, image_cur_parts)
 
                 # diff1 = loss(fake[:, :, 0:mask['xmin'], :], image_cur[:, :, 0:mask['xmin'], :])
                 #
