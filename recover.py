@@ -187,24 +187,26 @@ if __name__ == '__main__':
                 fake_parts = []
                 image_cur_parts = []
 
-                maximum_dist = max(image_cur.shape[2], image_cur.shape[3]) + 2
-                for dist in range(1, maximum_dist):
+                max_distance = 7
+                for dist in range(1, max_distance + 1):
+
+                    coeff = 1 - (dist - 1)/max_distance
 
                     if xmin - dist >= 0:
-                        fake_parts.append(fake[:, :, xmin - dist, max(0, ymin - dist):(ymax + dist + 1)])
-                        image_cur_parts.append(image_cur[:, :, xmin - dist, max(0, ymin - dist):(ymax + dist + 1)])
+                        fake_parts.append(coeff * fake[:, :, xmin - dist, max(0, ymin - dist):(ymax + dist + 1)])
+                        image_cur_parts.append(coeff * image_cur[:, :, xmin - dist, max(0, ymin - dist):(ymax + dist + 1)])
 
                     if xmax + dist < image_cur.shape[2]:
-                        fake_parts.append(fake[:, :, xmax + dist, max(0, ymin - dist):(ymax + dist + 1)])
-                        image_cur_parts.append(image_cur[:, :, xmax + dist, max(0, ymin - dist):(ymax + dist + 1)])
+                        fake_parts.append(coeff * fake[:, :, xmax + dist, max(0, ymin - dist):(ymax + dist + 1)])
+                        image_cur_parts.append(coeff * image_cur[:, :, xmax + dist, max(0, ymin - dist):(ymax + dist + 1)])
 
                     if ymin - dist >= 0:
-                        fake_parts.append(fake[:, :, max(0, xmin - dist + 1):(xmax + dist), ymin - dist])
-                        image_cur_parts.append(image_cur[:, :, max(0, xmin - dist + 1):(xmax + dist), ymin - dist])
+                        fake_parts.append(coeff * fake[:, :, max(0, xmin - dist + 1):(xmax + dist), ymin - dist])
+                        image_cur_parts.append(coeff * image_cur[:, :, max(0, xmin - dist + 1):(xmax + dist), ymin - dist])
 
                     if ymax + dist < image_cur.shape[3]:
-                        fake_parts.append(fake[:, :, max(0, xmin - dist + 1):(xmax + dist), ymax + dist])
-                        image_cur_parts.append(image_cur[:, :, max(0, xmin - dist + 1):(xmax + dist), ymax + dist])
+                        fake_parts.append(coeff * fake[:, :, max(0, xmin - dist + 1):(xmax + dist), ymax + dist])
+                        image_cur_parts.append(coeff * image_cur[:, :, max(0, xmin - dist + 1):(xmax + dist), ymax + dist])
 
                 diff = custom_loss_bis(fake_parts, image_cur_parts)
 
@@ -219,23 +221,18 @@ if __name__ == '__main__':
                 #              image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']])
                 # diff = diff1 + diff2 + diff3 + diff4
 
-                fake_parts_bis = [fake[:, :, 0:mask['xmin'], :],
-                              fake[:, :, mask['xmax'] + 1:, :],
-                              fake[:, :, mask['xmin']:mask['xmax'] + 1, mask['ymax'] + 1:],
-                              fake[:, :, mask['xmin']:mask['xmax'] + 1, :mask['ymin']]
-                              ]
-                image_cur_parts_bis = [image_cur[:, :, 0:mask['xmin'], :],
-                                   image_cur[:, :, mask['xmax']+1:, :],
-                                   image_cur[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:],
-                                   image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']]]
+                # fake_parts_bis = [fake[:, :, 0:mask['xmin'], :],
+                #               fake[:, :, mask['xmax'] + 1:, :],
+                #               fake[:, :, mask['xmin']:mask['xmax'] + 1, mask['ymax'] + 1:],
+                #               fake[:, :, mask['xmin']:mask['xmax'] + 1, :mask['ymin']]
+                #               ]
+                # image_cur_parts_bis = [image_cur[:, :, 0:mask['xmin'], :],
+                #                    image_cur[:, :, mask['xmax']+1:, :],
+                #                    image_cur[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:],
+                #                    image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']]]
+                #
+                # diffbis = custom_loss(fake_parts_bis, image_cur_parts_bis)
 
-                diffbis = custom_loss(fake_parts_bis, image_cur_parts_bis)
-
-                if i%500==0:
-                    print("********************")
-                    print(f"Diff {diff}")
-                    print(f"Diffbis {diffbis}")
-                    print("*******************")
             else:
                 diff = loss(fake, image_cur)
             errD = - D(image_cur).mean()
