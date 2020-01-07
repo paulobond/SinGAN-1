@@ -154,23 +154,58 @@ if __name__ == '__main__':
         #     W = (1000*W).sqrt()
 
         # SIMPLE WEIGHT
-        if opt.use_mask:
-            W = copy.deepcopy(fake)
-            W[:, :, :, :] = 1
-            W[:, :, mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1] = 0
-
-        def weighted_mse_loss(input, target, weight):
-            return (weight * (input - target) ** 2).mean()
+        # if opt.use_mask:
+        #     W = copy.deepcopy(fake)
+        #     W[:, :, :, :] = 1
+        #     W[:, :, mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1] = 0
 
         os.mkdir(f"{dir_name}/{n}")
         for i in range(10000):
             image_cur = G(noise_amp*z_curr + I_prev, I_prev)
             loss = nn.MSELoss()
             if opt.use_mask:
+
                 mask = masks[n]
+                xmin = mask['xmin']
+                xmax = mask['xmax']
+                ymin = mask['ymin']
+                ymax = mask['ymax']
 
                 # diff = loss(W*fake, W*image_cur)
-                diff = weighted_mse_loss(image_cur, fake, W)
+
+                differences = []
+                for dist in range(1, 10):
+
+                    if xmin-dist >= 0:
+                        diff1 = loss(fake[:, :, xmin-dist, max(0, ymin-dist):(ymax+dist+1)],
+                                     image_cur[:, :, xmin-dist, max(0, ymin-dist):(ymax+dist+1)])
+                    else:
+                        diff1 = 0
+
+                    if xmax+dist < image_cur.shape[2]:
+                        diff2 = loss(fake[:, :, xmax+dist, max(0, ymin-dist):(ymax+dist+1)],
+                                     image_cur[:, :, xmax+dist, max(0, ymin-dist):(ymax+dist+1)])
+                    else:
+                        diff2 = 0
+
+                    if ymin-dist >= 0:
+                        diff3 = loss(fake[:, :, xmin:xmax+1, ymin-dist],
+                                     image_cur[:, :, xmin:xmax+1, ymin-dist])
+                    else:
+                        diff3 = 0
+
+                    if ymin+dist < image_cur.shape[3]:
+                        diff4 = loss(fake[:, :, xmin:xmax+1, ymin+dist],
+                                     image_cur[:, :, xmin:xmax+1, ymin+dist])
+                    else:
+                        diff4 = 0
+
+                    weight = 1 - 0.1*dist
+                    diff_i = max(0, weight) * (diff1 + diff2 + diff3 + diff4)
+
+                    differences.append(diff_i)
+
+                diff = sum(differences)
 
                 # diff1 = loss(fake[:, :, 0:mask['xmin'], :], image_cur[:, :, 0:mask['xmin'], :])
                 #
