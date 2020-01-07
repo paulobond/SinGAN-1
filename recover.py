@@ -174,7 +174,8 @@ if __name__ == '__main__':
                 # diff = loss(W*fake, W*image_cur)
 
                 differences = []
-                for dist in range(1, 10):
+                maximum_dist = max(image_cur.shape[3], image_cur.shape[4]) + 2
+                for dist in range(1, maximum_dist):
 
                     if xmin-dist >= 0:
                         diff1 = loss(fake[:, :, xmin-dist, max(0, ymin-dist):(ymax+dist+1)],
@@ -200,24 +201,28 @@ if __name__ == '__main__':
                     else:
                         diff4 = 0
 
-                    weight = 1 - 0.1*dist
-                    diff_i = max(0, weight) * (diff1 + diff2 + diff3 + diff4)
+                    diff_i = 1 * (diff1 + diff2 + diff3 + diff4)
 
                     differences.append(diff_i)
 
                 diff = sum(differences)
 
-                # diff1 = loss(fake[:, :, 0:mask['xmin'], :], image_cur[:, :, 0:mask['xmin'], :])
-                #
-                # diff2 = loss(fake[:, :, mask['xmax']+1:, :], image_cur[:, :, mask['xmax']+1:, :])
-                #
-                # diff3 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:],
-                #              image_cur[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:])
-                #
-                # diff4 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']],
-                #              image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']])
-                #
-                # diff = diff1 + diff2 + diff3 + diff4
+                diff1 = loss(fake[:, :, 0:mask['xmin'], :], image_cur[:, :, 0:mask['xmin'], :])
+
+                diff2 = loss(fake[:, :, mask['xmax']+1:, :], image_cur[:, :, mask['xmax']+1:, :])
+
+                diff3 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:],
+                             image_cur[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:])
+
+                diff4 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']],
+                             image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']])
+
+                diffbis = diff1 + diff2 + diff3 + diff4
+
+                print("****************")
+                print(f"Diff 1 : {diff}")
+                print(f"Diff bis: {diffbis}")
+                print("****************")
 
             else:
                 diff = loss(fake, image_cur)
@@ -238,7 +243,7 @@ if __name__ == '__main__':
                 with open(f"{dir_name}/{n}/report.txt", 'a') as txt_f:
                     txt_f.write(f'Iteration {i}  (reg: {opt.reg}; disc loss weight: {opt.disc_loss};'
                                 f' use zopt: {opt.use_zopt})\n'
-                                f'MSE loss: {loss(fake, image_cur)}\n'
+                                f'MSE loss: {diff}\n'
                                 f'Mean |z|: {z_curr.abs().mean()}\n'
                                 f'Max |z|: {z_curr.abs().max()}\n'
                                 f'Error Discriminator: {- D(image_cur).mean()}\n\n\n')
