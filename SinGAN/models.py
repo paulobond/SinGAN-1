@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
+import copy
 
 
 class ConvBlock(nn.Sequential):
@@ -61,3 +62,26 @@ class GeneratorConcatSkip2CleanAdd(nn.Module):
         ind = int((y.shape[2]-x.shape[2])/2)
         y = y[:,:,ind:(y.shape[2]-ind),ind:(y.shape[3]-ind)]
         return x+y
+
+
+def get_mask_discriminator(real, mask, opt, cover_ratio=0.8):
+
+    real_zeros_ones = copy.deepcopy(real)
+    real_zeros_ones[:, :, :, :] = 0
+    real_zeros_ones[:, :, mask['xmin']:mask['xmax'] + 1, mask['ymin']:mask['ymax'] + 1] = 1
+    toy_disc = WDiscriminator(opt, find_mask=True).to(opt.device)
+    output_clamped = torch.clamp(toy_disc(real_zeros_ones), 0, 1)
+
+    xs, ys = [], []
+    for i in range(output_clamped.shape[2]):
+        for j in range(output_clamped.shape[3]):
+            if output_clamped[0, 0, i, j] >= cover_ratio:
+                xs.append(i)
+                ys.append(j)
+    new_mask = {
+        'xmin': min(xs),
+        'xmax': max(xs),
+        'ymin': min(ys),
+        'ymax': max(ys)
+    }
+    return new_mask, output_clamped.shape
