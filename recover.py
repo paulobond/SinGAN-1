@@ -165,19 +165,20 @@ if __name__ == '__main__':
             loss = nn.MSELoss()
             if opt.use_mask:
                 mask = masks[n]
-                diff = loss(W*fake, W*image_cur)
 
-                # diff1 = loss(fake[:, :, 0:mask['xmin'], :], image_cur[:, :, 0:mask['xmin'], :])
-                #
-                # diff2 = loss(fake[:, :, mask['xmax']+1:, :], image_cur[:, :, mask['xmax']+1:, :])
-                #
-                # diff3 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:],
-                #              image_cur[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:])
-                #
-                # diff4 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']],
-                #              image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']])
-                #
-                # diff = diff1 + diff2 + diff3 + diff4
+                # diff = loss(W*fake, W*image_cur)
+
+                diff1 = loss(fake[:, :, 0:mask['xmin'], :], image_cur[:, :, 0:mask['xmin'], :])
+
+                diff2 = loss(fake[:, :, mask['xmax']+1:, :], image_cur[:, :, mask['xmax']+1:, :])
+
+                diff3 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:],
+                             image_cur[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:])
+
+                diff4 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']],
+                             image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']])
+
+                diff = diff1 + diff2 + diff3 + diff4
 
             else:
                 diff = loss(fake, image_cur)
