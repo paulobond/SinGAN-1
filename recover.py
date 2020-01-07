@@ -239,7 +239,7 @@ if __name__ == '__main__':
 
             if opt.use_mask:
                 mask = masks[n]
-                disc_mask_zone, disc_output_shape = models.get_mask_discriminator(image_cur, mask, opt,
+                disc_mask_zone, disc_output_shape = models.get_mask_discriminator(fake, mask, opt,
                                                                                   expand_mask_by=7)
                 xmin, xmax = disc_mask_zone['xmin'], disc_mask_zone['xmax']
                 ymin, ymax = disc_mask_zone['ymin'], disc_mask_zone['ymax']
