@@ -287,7 +287,7 @@ if __name__ == '__main__':
                 for j in range(mask['ymin'], mask['ymax']+1):
                     new_image[:,:,i,j] = image_cur[:,:,i,j]
 
-            plt.imsave(f'{dir_name}/{n}/full_reconstruction_after_copy_paste_png',
+            plt.imsave(f'{dir_name}/{n}/full_reconstruction_after_copy_paste.png',
                        functions.convert_image_np(new_image.detach()),
                        vmin=0,
                        vmax=1)
