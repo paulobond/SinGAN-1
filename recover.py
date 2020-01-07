@@ -204,26 +204,27 @@ if __name__ == '__main__':
                         diff2 = loss(fake[:, :, xmax+dist, max(0, ymin-dist):(ymax+dist+1)],
                                      image_cur[:, :, xmax+dist, max(0, ymin-dist):(ymax+dist+1)])
 
-                        fake_parts.append(fake[:, :, xmin-dist, max(0, ymin-dist):(ymax+dist+1)])
-                        image_cur_parts.append(image_cur[:, :, xmin-dist, max(0, ymin-dist):(ymax+dist+1)])
+                        fake_parts.append(fake[:, :, xmax+dist, max(0, ymin-dist):(ymax+dist+1)])
+                        image_cur_parts.append(image_cur[:, :, xmax+dist, max(0, ymin-dist):(ymax+dist+1)])
                     else:
                         diff2 = 0
 
                     if ymin-dist >= 0:
-                        diff3 = loss(fake[:, :, xmin:xmax+1, ymin-dist],
-                                     image_cur[:, :, xmin:xmax+1, ymin-dist])
 
-                        fake_parts.append(fake[:, :, xmin:xmax+1, ymin-dist])
-                        image_cur_parts.append(image_cur[:, :, xmin:xmax+1, ymin-dist])
+                        diff3 = loss(fake[:, :, max(0,xmin-dist+1):(xmax+1+dist), ymin-dist],
+                                     image_cur[:, :, max(0,xmin-dist+1):(xmax+1+dist), ymin-dist])
+
+                        fake_parts.append(fake[:, :, max(0,xmin-dist+1):(xmax+1+dist), ymin-dist])
+                        image_cur_parts.append(image_cur[:, :, max(0,xmin-dist+1):(xmax+1+dist), ymin-dist])
                     else:
                         diff3 = 0
 
                     if ymin+dist < image_cur.shape[3]:
-                        diff4 = loss(fake[:, :, xmin:xmax+1, ymin+dist],
-                                     image_cur[:, :, xmin:xmax+1, ymin+dist])
+                        diff4 = loss(fake[:, :, max(0, xmin-dist+1):(xmax+1+dist), ymin+dist],
+                                     image_cur[:, :, max(0, xmin-dist+1):(xmax+1+dist), ymin+dist])
 
-                        fake_parts.append(fake[:, :, xmin:xmax+1, ymin+dist])
-                        image_cur_parts.append(image_cur[:, :, xmin:xmax+1, ymin+dist])
+                        fake_parts.append(fake[:, :, max(0, xmin-dist+1):(xmax+1+dist), ymin+dist])
+                        image_cur_parts.append(image_cur[:, :, max(0, xmin-dist+1):(xmax+1+dist), ymin+dist])
                     else:
                         diff4 = 0
 
