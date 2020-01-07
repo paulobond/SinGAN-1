@@ -179,39 +179,54 @@ if __name__ == '__main__':
 
                 # diff = loss(W*fake, W*image_cur)
 
-                # differences = []
-                # maximum_dist = max(image_cur.shape[2], image_cur.shape[3]) + 2
-                # for dist in range(1, maximum_dist):
-                #
-                #     if xmin-dist >= 0:
-                #         diff1 = loss(fake[:, :, xmin-dist, max(0, ymin-dist):(ymax+dist+1)],
-                #                      image_cur[:, :, xmin-dist, max(0, ymin-dist):(ymax+dist+1)])
-                #     else:
-                #         diff1 = 0
-                #
-                #     if xmax+dist < image_cur.shape[2]:
-                #         diff2 = loss(fake[:, :, xmax+dist, max(0, ymin-dist):(ymax+dist+1)],
-                #                      image_cur[:, :, xmax+dist, max(0, ymin-dist):(ymax+dist+1)])
-                #     else:
-                #         diff2 = 0
-                #
-                #     if ymin-dist >= 0:
-                #         diff3 = loss(fake[:, :, xmin:xmax+1, ymin-dist],
-                #                      image_cur[:, :, xmin:xmax+1, ymin-dist])
-                #     else:
-                #         diff3 = 0
-                #
-                #     if ymin+dist < image_cur.shape[3]:
-                #         diff4 = loss(fake[:, :, xmin:xmax+1, ymin+dist],
-                #                      image_cur[:, :, xmin:xmax+1, ymin+dist])
-                #     else:
-                #         diff4 = 0
-                #
-                #     diff_i = 1 * (diff1 + diff2 + diff3 + diff4)
-                #
-                #     differences.append(diff_i)
-                #
-                # diff = sum(differences)
+                differences = []
+                fake_parts = []
+                image_cur_parts = []
+
+                maximum_dist = max(image_cur.shape[2], image_cur.shape[3]) + 2
+                for dist in range(1, maximum_dist):
+
+                    if xmin-dist >= 0:
+                        diff1 = loss(fake[:, :, xmin-dist, max(0, ymin-dist):(ymax+dist+1)],
+                                     image_cur[:, :, xmin-dist, max(0, ymin-dist):(ymax+dist+1)])
+
+                        fake_parts.append(fake[:, :, xmin-dist, max(0, ymin-dist):(ymax+dist+1)])
+                        image_cur_parts.append(image_cur[:, :, xmin-dist, max(0, ymin-dist):(ymax+dist+1)])
+                    else:
+                        diff1 = 0
+
+                    if xmax+dist < image_cur.shape[2]:
+                        diff2 = loss(fake[:, :, xmax+dist, max(0, ymin-dist):(ymax+dist+1)],
+                                     image_cur[:, :, xmax+dist, max(0, ymin-dist):(ymax+dist+1)])
+
+                        fake_parts.append(fake[:, :, xmin-dist, max(0, ymin-dist):(ymax+dist+1)])
+                        image_cur_parts.append(image_cur[:, :, xmin-dist, max(0, ymin-dist):(ymax+dist+1)])
+                    else:
+                        diff2 = 0
+
+                    if ymin-dist >= 0:
+                        diff3 = loss(fake[:, :, xmin:xmax+1, ymin-dist],
+                                     image_cur[:, :, xmin:xmax+1, ymin-dist])
+
+                        fake_parts.append(fake[:, :, xmin:xmax+1, ymin-dist])
+                        image_cur_parts.append(image_cur[:, :, xmin:xmax+1, ymin-dist])
+                    else:
+                        diff3 = 0
+
+                    if ymin+dist < image_cur.shape[3]:
+                        diff4 = loss(fake[:, :, xmin:xmax+1, ymin+dist],
+                                     image_cur[:, :, xmin:xmax+1, ymin+dist])
+
+                        fake_parts.append(fake[:, :, xmin:xmax+1, ymin+dist])
+                        image_cur_parts.append(image_cur[:, :, xmin:xmax+1, ymin+dist])
+                    else:
+                        diff4 = 0
+
+                    diff_i = 1 * (diff1 + diff2 + diff3 + diff4)
+
+                    differences.append(diff_i)
+
+                diff = custom_loss(fake_parts, image_cur_parts)
 
                 # diff1 = loss(fake[:, :, 0:mask['xmin'], :], image_cur[:, :, 0:mask['xmin'], :])
                 #
@@ -224,18 +239,23 @@ if __name__ == '__main__':
                 #              image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']])
                 # diff = diff1 + diff2 + diff3 + diff4
 
-                fake_parts = [fake[:, :, 0:mask['xmin'], :],
+                fake_parts_bis = [fake[:, :, 0:mask['xmin'], :],
                               fake[:, :, mask['xmax'] + 1:, :],
                               fake[:, :, mask['xmin']:mask['xmax'] + 1, mask['ymax'] + 1:],
                               fake[:, :, mask['xmin']:mask['xmax'] + 1, :mask['ymin']]
                               ]
-                image_cur_parts = [image_cur[:, :, 0:mask['xmin'], :],
+                image_cur_parts_bis = [image_cur[:, :, 0:mask['xmin'], :],
                                    image_cur[:, :, mask['xmax']+1:, :],
                                    image_cur[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:],
                                    image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']]]
 
-                diff = custom_loss(fake_parts, image_cur_parts)
+                diffbis = custom_loss(fake_parts_bis, image_cur_parts_bis)
 
+                if i%500==0:
+                    print("********************")
+                    print(f"Diff {diff}")
+                    print(f"Diffbis {diffbis}")
+                    print("*******************")
             else:
                 diff = loss(fake, image_cur)
             errD = - D(image_cur).mean()
