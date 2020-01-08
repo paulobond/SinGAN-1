@@ -189,9 +189,6 @@ if __name__ == '__main__':
         os.mkdir(f"{dir_name}/{n}")
         disc_mask_zone, disc_output_shape = None, None
 
-        print(f"z_curr shape: {z_curr}")
-        print(f"I_prev shape: {I_prev}")
-
         for i in range(10000):
             image_cur = G(noise_amp*z_curr + I_prev, I_prev)
             loss = nn.MSELoss()
