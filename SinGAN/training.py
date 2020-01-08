@@ -13,7 +13,7 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
     in_s = 0
     scale_num = 0
     real = imresize(real_,opt.scale1,opt)
-    reals = functions.creat_reals_pyramid(real,opt)
+    reals, _ = functions.creat_reals_pyramid(real,opt)
     nfc_prev = 0
     Ds = []
 
