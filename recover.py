@@ -78,10 +78,14 @@ if __name__ == '__main__':
     opt.scale1 = optbis.scale1
     opt.stop_scale = optbis.stop_scale
 
+    print(f"previous stop scale: {optbis.stop_scale}")
+
     fake = img.imread('%s/%s' % (opt.fake_input_dir, opt.fake_input_name))
     fake = functions.np2torch(fake, opt)
     functions.adjust_scales2image(fake, opt)
     fake = imresize(fake, opt.scale1, opt)
+
+    print(f"new stop scale: {opt.stop_scale}")
 
     if opt.use_mask:
         fake, mask = put_mask(fake, n_pixels=opt.mask_size, offset_x=opt.mask_xmin, offset_y=opt.mask_ymin)
