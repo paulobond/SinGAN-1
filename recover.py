@@ -79,6 +79,7 @@ if __name__ == '__main__':
     opt.stop_scale = optbis.stop_scale
 
     print(f"previous stop scale: {optbis.stop_scale}")
+    print(f"previous scale factor: {optbis.scale_factor}")
 
     fake = img.imread('%s/%s' % (opt.fake_input_dir, opt.fake_input_name))
     fake = functions.np2torch(fake, opt)
@@ -86,11 +87,10 @@ if __name__ == '__main__':
     fake = imresize(fake, opt.scale1, opt)
 
     print(f"new stop scale: {opt.stop_scale}")
+    print(f"new scale factor: {opt.scale_factor}")
 
     if opt.use_mask:
         fake, mask = put_mask(fake, n_pixels=opt.mask_size, offset_x=opt.mask_xmin, offset_y=opt.mask_ymin)
-        print(f"Fake dimensions: {fake.shape}")
-        print(f"Scale 1: {opt.scale1}")
         fakes, masks = functions.creat_reals_pyramid(fake, opt, mask=mask)
 
         # For testing purposes
