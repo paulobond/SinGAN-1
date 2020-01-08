@@ -56,9 +56,7 @@ if __name__ == '__main__':
     opt.mode = 'train'
     opt = functions.post_config(opt)
 
-    # Output dir
-    dir_name = f'Recover/{opt.input_name[:-4]}_{opt.fake_input_name[:-4]}_{opt.reg}_{opt.disc_loss}_{opt.use_zopt}_{opt.use_mask}'
-    os.makedirs(dir_name, exist_ok=True)
+
 
     # LOAD MODEL #
     input_name = opt.input_name
@@ -103,12 +101,16 @@ if __name__ == '__main__':
         fakes, masks = functions.creat_reals_pyramid(fake, opt, mask=None)
         assert masks == []
 
-    in_s = torch.full(reals[0].shape, 0, device=opt.device)
+    in_s = torch.full(fake.shape, 0, device=opt.device)
     image_cur = None
     pad1 = ((opt.ker_size - 1) * opt.num_layer) / 2
     m = nn.ZeroPad2d(int(pad1))
     n = 0
     Z_stars = []
+
+    # Output dir
+    dir_name = f'Recover/{opt.input_name[:-4]}_{opt.fake_input_name[:-4]}_{opt.reg}_{opt.disc_loss}_{opt.use_zopt}_{opt.use_mask}'
+    os.makedirs(dir_name, exist_ok=True)
 
     for G, Z_opt, noise_amp, fake, D in zip(Gs, Zs, NoiseAmp, fakes, Ds):
 
@@ -126,7 +128,7 @@ if __name__ == '__main__':
                 z_curr = z_curr.expand(1, 3, z_curr.shape[2], z_curr.shape[3])
                 z_curr = m(z_curr)
             else:
-                z_curr = functions.generate_noise([opt.nc_z,nzx,nzy], device=opt.device)
+                z_curr = functions.generate_noise([opt.nc_z, nzx, nzy], device=opt.device)
                 z_curr = m(z_curr)
 
         if image_prev is None:
@@ -134,7 +136,7 @@ if __name__ == '__main__':
         else:
             I_prev = image_prev
             I_prev = imresize(I_prev.detach(), 1/opt.scale_factor, opt)
-            I_prev = I_prev[:, :, 0:round(1 * reals[n].shape[2]), 0:round(1 * reals[n].shape[3])]
+            I_prev = I_prev[:, :, 0:round(1 * fake.shape[2]), 0:round(1 * fake.shape[3])]
             I_prev = m(I_prev)
             I_prev = I_prev[:, :, 0:z_curr.shape[2], 0:z_curr.shape[3]]
             I_prev = functions.upsampling(I_prev, z_curr.shape[2], z_curr.shape[3])
