@@ -114,8 +114,8 @@ if __name__ == '__main__':
 
         print(f"\n\n*******  Scale {n}  ***********\n")
 
-        nzx = (Z_opt.shape[2] - pad1 * 2)
-        nzy = (Z_opt.shape[3] - pad1 * 2)
+        nzx = (fake.shape[2] - pad1 * 2)
+        nzy = (fake.shape[3] - pad1 * 2)
         image_prev = image_cur
 
         if opt.use_zopt:
