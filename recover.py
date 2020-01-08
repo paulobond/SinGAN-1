@@ -95,6 +95,7 @@ if __name__ == '__main__':
     pad1 = ((opt.ker_size - 1) * opt.num_layer) / 2
     m = nn.ZeroPad2d(int(pad1))
     n = 0
+    Z_stars = []
 
     for G, Z_opt, noise_amp, fake, D in zip(Gs, Zs, NoiseAmp, fakes, Ds):
 
@@ -291,7 +292,8 @@ if __name__ == '__main__':
                        functions.convert_image_np(new_image.detach()),
                        vmin=0,
                        vmax=1)
-
+        Z_stars.append(z_curr)
+        torch.save(Z_stars, f'{dir_name}/Z_stars.pth')
         n += 1
 
 
