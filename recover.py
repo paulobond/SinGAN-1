@@ -101,7 +101,7 @@ if __name__ == '__main__':
         fakes, masks = functions.creat_reals_pyramid(fake, opt, mask=None)
         assert masks == []
 
-    in_s = torch.full(fake.shape, 0, device=opt.device)
+    in_s = torch.full(fakes[0].shape, 0, device=opt.device)
     image_cur = None
     pad1 = ((opt.ker_size - 1) * opt.num_layer) / 2
     m = nn.ZeroPad2d(int(pad1))
