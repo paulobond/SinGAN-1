@@ -89,6 +89,8 @@ if __name__ == '__main__':
 
     if opt.use_mask:
         fake, mask = put_mask(fake, n_pixels=opt.mask_size, offset_x=opt.mask_xmin, offset_y=opt.mask_ymin)
+        print(f"Fake dimensions: {fake.shape}")
+        print(f"Scale 1: {opt.scale1}")
         fakes, masks = functions.creat_reals_pyramid(fake, opt, mask=mask)
 
         # For testing purposes
