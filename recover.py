@@ -31,21 +31,26 @@ def put_mask(image, n_pixels=30, offset_x=None, offset_y=None):
 if __name__ == '__main__':
 
     parser = get_arguments()
-    parser.add_argument('--input_dir', help='input image dir', default='Input/Images')
-    parser.add_argument('--input_name', help='training image name', required=True)
+    parser.add_argument('--input_dir', help='input image dir (image on which singan was trained)',
+                        default='Input/Images')
+    parser.add_argument('--input_name', help='training image name (image on which singan was trained)',
+                        required=True)
 
-    parser.add_argument('--fake_input_dir', help='input image dir', default='Input/Images')
+    parser.add_argument('--fake_input_dir', help='input image dir (image used for the reconstruction, e.g the same'
+                                                 ' image'
+                                                 'as the image used for trained but with a missing part)',
+                        default='Input/Images')
     parser.add_argument('--fake_input_name', help='training image name', required=True)
 
-    parser.add_argument('--reg', help='regularization parameter', type=float, default=0.05)
-    parser.add_argument('--disc_loss', help='discrimination loss', type=float, default=0.01)
+    parser.add_argument('--reg', help='regularization parameter', type=float, default=0)
+    parser.add_argument('--disc_loss', help='discrimination loss weight', type=float, default=0.01)
 
     parser.add_argument('--use_zopt', help='use z_opt to initialize z', type=bool, default=False)
 
     parser.add_argument('--use_mask', help='fake input has mask for inpainting', type=bool, default=False)
-    parser.add_argument('--mask_size', help='mask is a square, specify size', type=int, default=30)
-    parser.add_argument('--mask_xmin', help='mask is a square, specify size', type=int, default=None)
-    parser.add_argument('--mask_ymin', help='mask is a square, specify size', type=int, default=None)
+    parser.add_argument('--mask_size', help='mask is a square, specify side size', type=int, default=30)
+    parser.add_argument('--mask_xmin', help='mask is a square, specify offset x (else random)', type=int, default=None)
+    parser.add_argument('--mask_ymin', help='mask is a square, specify offset y (else random)', type=int, default=None)
 
     opt = parser.parse_args()
     opt.mode = 'train'
@@ -75,7 +80,9 @@ if __name__ == '__main__':
 
     fake = img.imread('%s/%s' % (opt.fake_input_dir, opt.fake_input_name))
     fake = functions.np2torch(fake, opt)
+    functions.adjust_scales2image(fake, opt)
     fake = imresize(fake, opt.scale1, opt)
+
     if opt.use_mask:
         fake, mask = put_mask(fake, n_pixels=opt.mask_size, offset_x=opt.mask_xmin, offset_y=opt.mask_ymin)
         fakes, masks = functions.creat_reals_pyramid(fake, opt, mask=mask)
