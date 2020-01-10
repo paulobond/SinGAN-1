@@ -310,6 +310,9 @@ if __name__ == '__main__':
                        vmax=1)
         Z_stars.append(z_curr)
         torch.save(Z_stars, f'{dir_name}/Z_stars.pth')
+        if opt.use_mask:
+            torch.save(masks, f'{masks}/masks.pth')
+
         n += 1
 
 
