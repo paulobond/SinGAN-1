@@ -146,7 +146,6 @@ if __name__ == '__main__':
         optimizer_z = optim.Adam([z_curr], lr=opt.lr_d)
         scheduler_z = torch.optim.lr_scheduler.MultiStepLR(optimizer=optimizer_z, milestones=[1600], gamma=opt.gamma)
 
-
         # COMPLEX WEIGHT ##
         # if opt.use_mask:
         #
@@ -254,15 +253,15 @@ if __name__ == '__main__':
             else:
                 diff = loss(fake, image_cur)
 
-            if opt.use_mask:
-                mask = masks[n]
-                disc_mask_zone, disc_output_shape = models.get_mask_discriminator(fake, mask, opt,
-                                                                                  expand_mask_by=7)
-                xmin, xmax = disc_mask_zone['xmin'], disc_mask_zone['xmax']
-                ymin, ymax = disc_mask_zone['ymin'], disc_mask_zone['ymax']
-                errD = - D(image_cur)[:, :, xmin:xmax+1, ymin:ymax+1].mean()
-            else:
-                errD = - D(image_cur).mean()
+            # if opt.use_mask:
+            #     mask = masks[n]
+            #     disc_mask_zone, disc_output_shape = models.get_mask_discriminator(fake, mask, opt,
+            #                                                                       expand_mask_by=7)
+            #     xmin, xmax = disc_mask_zone['xmin'], disc_mask_zone['xmax']
+            #     ymin, ymax = disc_mask_zone['ymin'], disc_mask_zone['ymax']
+            #     errD = - D(image_cur)[:, :, xmin:xmax+1, ymin:ymax+1].mean()
+            # else:
+            errD = - D(image_cur).mean()
 
             (diff + opt.reg * z_curr.abs().mean() + opt.disc_loss * errD).backward(retain_graph=True)
             optimizer_z.step()
