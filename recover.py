@@ -56,6 +56,8 @@ if __name__ == '__main__':
                         default=True)
     parser.add_argument('--prio_neigh', help='use neighbouring pixels only for prio', type=bool,
                         default=False)
+    parser.add_argument('--ss_prio_neigh', help='start scale for using neighbouring pixels only for prio', type=int,
+                        default=4)
 
     opt = parser.parse_args()
     opt.mode = 'train'
@@ -222,7 +224,7 @@ if __name__ == '__main__':
             else:
                 diff = loss(fake, image_cur)
 
-            if opt.use_mask and opt.prio_neigh:
+            if opt.use_mask and opt.prio_neigh and n >= opt.ss_prio_neigh:
                 mask = masks[n]
                 disc_mask_zone, disc_output_shape = models.get_mask_discriminator(fake, mask, opt,
                                                                                   expand_mask_by=7)
