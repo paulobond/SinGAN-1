@@ -52,11 +52,14 @@ if __name__ == '__main__':
     parser.add_argument('--mask_xmin', help='mask is a square, specify offset x (else random)', type=int, default=None)
     parser.add_argument('--mask_ymin', help='mask is a square, specify offset y (else random)', type=int, default=None)
 
+    parser.add_argument('--mse_neigh', help='use neighbouring pixels only for MSE reconstruction', type=bool,
+                        default=True)
+    parser.add_argument('--prio_neigh', help='use neighbouring pixels only for prio', type=bool,
+                        default=False)
+
     opt = parser.parse_args()
     opt.mode = 'train'
     opt = functions.post_config(opt)
-
-
 
     # LOAD MODEL #
     input_name = opt.input_name
@@ -109,7 +112,8 @@ if __name__ == '__main__':
     Z_stars = []
 
     # Output dir
-    dir_name = f'Recover/{opt.input_name[:-4]}_{opt.fake_input_name[:-4]}_{opt.reg}_{opt.disc_loss}_{opt.use_zopt}_{opt.use_mask}'
+    dir_name = f'Recover/{opt.input_name[:-4]}_{opt.fake_input_name[:-4]}_dl-{opt.disc_loss}_' \
+        f'mse_neigh-{opt.mse_neigh}_prio_neigh-{opt.prio_neigh}'
     os.makedirs(dir_name, exist_ok=True)
 
     for G, Z_opt, noise_amp, fake, D in zip(Gs, Zs, NoiseAmp, fakes, Ds):
@@ -146,34 +150,6 @@ if __name__ == '__main__':
         optimizer_z = optim.Adam([z_curr], lr=opt.lr_d)
         scheduler_z = torch.optim.lr_scheduler.MultiStepLR(optimizer=optimizer_z, milestones=[1600], gamma=opt.gamma)
 
-        # COMPLEX WEIGHT ##
-        # if opt.use_mask:
-        #
-        #     W0 = copy.deepcopy(fake)
-        #     W0[:, :, :, :] = 1
-        #
-        #     W1 = copy.deepcopy(fake)
-        #     W1[:, :, :, :] = 0
-        #     W1[:, :, mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1] = 1
-        #
-        #     window_size = 8
-        #     W = copy.deepcopy(fake)
-        #     for i in range(W.shape[2]):
-        #         for j in range(W.shape[3]):
-        #             n_neighbors = int(W0[0, 0, max(i-window_size,0):i+window_size+1,
-        #                               max(0,j-window_size):j+window_size+1].sum()) - 1
-        #             assert n_neighbors > 0
-        #             W[:, :, i, j] = float((W1[0, 0, max(0,i-window_size):i+window_size+1,
-        #                                     max(0,j-window_size):j+window_size+1]).sum()) / n_neighbors
-        #     W[:, :, mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1] = 0
-        #     W = (1000*W).sqrt()
-
-        # SIMPLE WEIGHT
-        # if opt.use_mask:
-        #     W = copy.deepcopy(fake)
-        #     W[:, :, :, :] = 1
-        #     W[:, :, mask['xmin']:mask['xmax']+1, mask['ymin']:mask['ymax']+1] = 0
-
 
         def custom_loss(tensor_list_1, tensor_list_2):
             a = sum([((t1-t2)**2).sum() for t1, t2 in zip(tensor_list_1, tensor_list_2)])
@@ -199,69 +175,59 @@ if __name__ == '__main__':
                 ymin = mask['ymin']
                 ymax = mask['ymax']
 
-                # diff = loss(W*fake, W*image_cur)
+                if opt.mse_neigh:
 
-                fake_parts = []
-                image_cur_parts = []
+                    fake_parts = []
+                    image_cur_parts = []
 
-                max_distance = 7
-                for dist in range(1, max_distance + 1):
+                    max_distance = 7
+                    for dist in range(1, max_distance + 1):
 
-                    coeff = 1 - (dist - 1)/max_distance
+                        coeff = 1 - (dist - 1)/max_distance
 
-                    if xmin - dist >= 0:
-                        fake_parts.append(coeff * fake[:, :, xmin - dist, max(0, ymin - dist):(ymax + dist + 1)])
-                        image_cur_parts.append(coeff * image_cur[:, :, xmin - dist, max(0, ymin - dist):(ymax + dist + 1)])
+                        if xmin - dist >= 0:
+                            fake_parts.append(coeff * fake[:, :, xmin - dist, max(0, ymin - dist):(ymax + dist + 1)])
+                            image_cur_parts.append(coeff * image_cur[:, :, xmin - dist, max(0, ymin - dist):(ymax + dist + 1)])
 
-                    if xmax + dist < image_cur.shape[2]:
-                        fake_parts.append(coeff * fake[:, :, xmax + dist, max(0, ymin - dist):(ymax + dist + 1)])
-                        image_cur_parts.append(coeff * image_cur[:, :, xmax + dist, max(0, ymin - dist):(ymax + dist + 1)])
+                        if xmax + dist < image_cur.shape[2]:
+                            fake_parts.append(coeff * fake[:, :, xmax + dist, max(0, ymin - dist):(ymax + dist + 1)])
+                            image_cur_parts.append(coeff * image_cur[:, :, xmax + dist, max(0, ymin - dist):(ymax + dist + 1)])
 
-                    if ymin - dist >= 0:
-                        fake_parts.append(coeff * fake[:, :, max(0, xmin - dist + 1):(xmax + dist), ymin - dist])
-                        image_cur_parts.append(coeff * image_cur[:, :, max(0, xmin - dist + 1):(xmax + dist), ymin - dist])
+                        if ymin - dist >= 0:
+                            fake_parts.append(coeff * fake[:, :, max(0, xmin - dist + 1):(xmax + dist), ymin - dist])
+                            image_cur_parts.append(coeff * image_cur[:, :, max(0, xmin - dist + 1):(xmax + dist), ymin - dist])
 
-                    if ymax + dist < image_cur.shape[3]:
-                        fake_parts.append(coeff * fake[:, :, max(0, xmin - dist + 1):(xmax + dist), ymax + dist])
-                        image_cur_parts.append(coeff * image_cur[:, :, max(0, xmin - dist + 1):(xmax + dist), ymax + dist])
+                        if ymax + dist < image_cur.shape[3]:
+                            fake_parts.append(coeff * fake[:, :, max(0, xmin - dist + 1):(xmax + dist), ymax + dist])
+                            image_cur_parts.append(coeff * image_cur[:, :, max(0, xmin - dist + 1):(xmax + dist), ymax + dist])
 
-                diff = custom_loss_bis(fake_parts, image_cur_parts)
+                    diff = custom_loss_bis(fake_parts, image_cur_parts)
 
-                # diff1 = loss(fake[:, :, 0:mask['xmin'], :], image_cur[:, :, 0:mask['xmin'], :])
-                #
-                # diff2 = loss(fake[:, :, mask['xmax']+1:, :], image_cur[:, :, mask['xmax']+1:, :])
-                #
-                # diff3 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:],
-                #              image_cur[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:])
-                #
-                # diff4 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']],
-                #              image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']])
-                # diff = diff1 + diff2 + diff3 + diff4
+                else:
 
-                # fake_parts_bis = [fake[:, :, 0:mask['xmin'], :],
-                #               fake[:, :, mask['xmax'] + 1:, :],
-                #               fake[:, :, mask['xmin']:mask['xmax'] + 1, mask['ymax'] + 1:],
-                #               fake[:, :, mask['xmin']:mask['xmax'] + 1, :mask['ymin']]
-                #               ]
-                # image_cur_parts_bis = [image_cur[:, :, 0:mask['xmin'], :],
-                #                    image_cur[:, :, mask['xmax']+1:, :],
-                #                    image_cur[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:],
-                #                    image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']]]
-                #
-                # diffbis = custom_loss(fake_parts_bis, image_cur_parts_bis)
+                    diff1 = loss(fake[:, :, 0:mask['xmin'], :], image_cur[:, :, 0:mask['xmin'], :])
+
+                    diff2 = loss(fake[:, :, mask['xmax']+1:, :], image_cur[:, :, mask['xmax']+1:, :])
+
+                    diff3 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:],
+                                 image_cur[:, :, mask['xmin']:mask['xmax']+1, mask['ymax']+1:])
+
+                    diff4 = loss(fake[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']],
+                                 image_cur[:, :, mask['xmin']:mask['xmax']+1, :mask['ymin']])
+                    diff = diff1 + diff2 + diff3 + diff4
 
             else:
                 diff = loss(fake, image_cur)
 
-            # if opt.use_mask:
-            #     mask = masks[n]
-            #     disc_mask_zone, disc_output_shape = models.get_mask_discriminator(fake, mask, opt,
-            #                                                                       expand_mask_by=7)
-            #     xmin, xmax = disc_mask_zone['xmin'], disc_mask_zone['xmax']
-            #     ymin, ymax = disc_mask_zone['ymin'], disc_mask_zone['ymax']
-            #     errD = - D(image_cur)[:, :, xmin:xmax+1, ymin:ymax+1].mean()
-            # else:
-            errD = - D(image_cur).mean()
+            if opt.use_mask and opt.prio_neigh:
+                mask = masks[n]
+                disc_mask_zone, disc_output_shape = models.get_mask_discriminator(fake, mask, opt,
+                                                                                  expand_mask_by=7)
+                xmin, xmax = disc_mask_zone['xmin'], disc_mask_zone['xmax']
+                ymin, ymax = disc_mask_zone['ymin'], disc_mask_zone['ymax']
+                errD = - D(image_cur)[:, :, xmin:xmax+1, ymin:ymax+1].mean()
+            else:
+                errD = - D(image_cur).mean()
 
             (diff + opt.reg * z_curr.abs().mean() + opt.disc_loss * errD).backward(retain_graph=True)
             optimizer_z.step()
