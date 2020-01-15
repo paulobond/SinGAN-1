@@ -61,6 +61,9 @@ if __name__ == '__main__':
     opt.mode = 'train'
     opt = functions.post_config(opt)
 
+    print(f"Using only neighboring pixels for reconstruction MSE: {opt.mse_neigh}")
+    print(f"Using only neighboring pixels for discimination prior: {opt.prio_neigh}")
+
     # LOAD MODEL #
     input_name = opt.input_name
     if torch.cuda.is_available():
