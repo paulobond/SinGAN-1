@@ -53,7 +53,7 @@ if __name__ == '__main__':
     parser.add_argument('--mask_ymin', help='mask is a square, specify offset y (else random)', type=int, default=None)
 
     parser.add_argument('--mse_neigh', help='use neighbouring pixels only for MSE reconstruction', type=bool,
-                        default=True)
+                        default=False)
     parser.add_argument('--prio_neigh', help='use neighbouring pixels only for prio', type=bool,
                         default=False)
     parser.add_argument('--ss_prio_neigh', help='start scale for using neighbouring pixels only for prio', type=int,
